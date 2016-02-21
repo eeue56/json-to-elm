@@ -5,6 +5,10 @@ Create Elm type aliases and decoders based on JSON input
 
 It will then recursively generate aliases and decoders for all the JSON objects in the json object.
 
+`create_type_alias` takes a json object, and returns a list of type aliases needed for that object
+
+`create_decoder` takes a type alias as a string, along with a prefix to use for custom decoders, and if the encoded fields have snakecase or not, and generates just the decoder for that type alias
+
 ## Example:
 
 ```python
@@ -52,3 +56,5 @@ decodePerson =
         |: ("location" := decodeLocation)
 ```
 for more examples of this, see the test function
+
+
