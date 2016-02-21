@@ -18,13 +18,13 @@ KNOWN_DECODERS = [
     'bool',
     'string' ]
 
-def getTypeName(string):
-    grabTypeName = re.search('type alias(.+)\=', string)
+def get_type_name(string):
+    grab_type_name = re.search('type alias(.+)\=', string)
 
-    if grabTypeName is None or len(grabTypeName.groups()) == 0:
+    if grab_type_name is None or len(grab_type_name.groups()) == 0:
         raise Exception("Can't find type alias declaration")
 
-    groups = grabTypeName.groups()
+    groups = grab_type_name.groups()
 
     if len(groups) > 1:
         raise "Please only give me one type alias at a time"
@@ -32,7 +32,7 @@ def getTypeName(string):
     return groups[0].strip()
 
 
-def getFields(string):
+def get_fields(string):
     grabFields = re.match(".*{(.+)\}", string)
 
     if grabFields is None or len(grabFields.groups()) == 0:
@@ -42,15 +42,15 @@ def getFields(string):
 
     return groups[0].split(',')
 
-def fieldNameAndType(string):
+def field_name_and_type(string):
     splitted = string.split(':')
 
     return (splitted[0].strip(), splitted[1].strip())
 
-def makeGuessAtDecoder(string):
+def make_guess_at_decoder(string):
     return string.lower()
 
-def makeGuessAtType(item, depth=0):
+def make_guess_at_type(item, depth=0):
 
     if depth > 20:
         print('Too much recursiveness!')
@@ -74,7 +74,7 @@ def makeGuessAtType(item, depth=0):
     if isinstance(item, list):
         if len(item) == 0:
             return 'List a'
-        return 'List ' + makeGuessAtType(item[0], depth=depth+1)
+        return 'List ' + make_guess_at_type(item[0], depth=depth+1)
 
     ## if it's a complicated item, instead of making a dict, return nothing
 
@@ -83,34 +83,34 @@ def makeGuessAtType(item, depth=0):
 
     return 'Unknown'
 
-def createTypeAlias(stuff, typeAliasName):
+def create_type_alias(stuff, type_alias_name):
     fields = []
 
     extra_aliases = []
 
     for name, value in stuff.items():
-        type = makeGuessAtType(value)
+        type = make_guess_at_type(value)
 
         if type == 'Something':
-            extra_aliases.extend(createTypeAlias(value, typeAliasName=name.capitalize()))
+            extra_aliases.extend(create_type_alias(value, type_alias_name=name.capitalize()))
             type = name.capitalize()
 
-        name = convertUnderscoreToCamelcase(name)
+        name = convert_underscore_to_camelcase(name)
 
         fields.append('{name} : {type}'.format(name=name, type=type))
 
-    joined_fields = '\n, '.join(fields)
+    joined_fields = '\n    , '.join(fields)
 
     extra_aliases.append('''
 type alias {name} =
     {{ {fields}
     }}
-'''.format(name=typeAliasName, fields=joined_fields)
+'''.format(name=type_alias_name, fields=joined_fields)
     )
 
     return extra_aliases
 
-def prefixDecoder(prefix, value):
+def prefix_decoder(prefix, value):
     parts = value.split()
 
     return ' '.join(
@@ -120,7 +120,7 @@ def prefixDecoder(prefix, value):
             for value in parts
     )
 
-def suffixDecoder(suffix, value):
+def suffix_decoder(suffix, value):
     parts = value.split()
 
     return ' '.join(
@@ -130,24 +130,24 @@ def suffixDecoder(suffix, value):
             for value in parts
     )
 
-def createDecoder(string, has_snakecase=False, prefix=None, suffix=None):
+def create_decoder(string, has_snakecase=False, prefix=None, suffix=None):
     string = re.sub('[\\n\\r]', '', string)
-    typeName = getTypeName(string)
-    fields = [fieldNameAndType(f) for f in getFields(string)]
+    type_name = get_type_name(string)
+    fields = [field_name_and_type(f) for f in get_fields(string)]
 
     if has_snakecase:
         fields = [
-            (convertCamelcaseToUnderscores(name), value)
+            (convert_camelcase_to_underscores(name), value)
                 for name, value in fields
         ]
 
-    fields = [(name, makeGuessAtDecoder(type)) for name, type in fields]
+    fields = [(name, make_guess_at_decoder(type)) for name, type in fields]
 
     if prefix is not None:
-        fields = [ (name, prefixDecoder(prefix, value)) for name, value in fields ]
+        fields = [ (name, prefix_decoder(prefix, value)) for name, value in fields ]
 
     if suffix is not None:
-        fields = [ (name, suffixDecoder(suffix, value)) for name, value in fields ]
+        fields = [ (name, suffix_decoder(suffix, value)) for name, value in fields ]
 
 
     formattedFields ='\n        '.join(
@@ -160,22 +160,22 @@ def createDecoder(string, has_snakecase=False, prefix=None, suffix=None):
 
 
     output = """
-decode{typeName} : Decoder {typeName}
-decode{typeName} =
-    succeed {typeName}
+decode{type_name} : Decoder {type_name}
+decode{type_name} =
+    succeed {type_name}
         {fields}
 
-    """.format(typeName=typeName, fields=formattedFields)
+    """.format(type_name=type_name, fields=formattedFields)
 
     return output.strip()
 
 
-def convertUnderscoreToCamelcase(name):
+def convert_underscore_to_camelcase(name):
     split = name.split('_')
     first = split[0]
     return first + ''.join(x.capitalize() or '_' for x in split[1:])
 
-def convertCamelcaseToUnderscores(name):
+def convert_camelcase_to_underscores(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
@@ -188,26 +188,34 @@ def test():
     stuff = json.loads(testJson)
     print('Creating type alias')
 
-    aliases = createTypeAlias(stuff, typeAliasName='Assignment')
+    aliases = create_type_alias(stuff, type_alias_name='Assignment')
     print('\n'.join(aliases))
 
     print('Creating decoder')
     decoders = []
     for alias in aliases:
-        decoder = createDecoder(alias, has_snakecase=True, prefix='decode')
+        decoder = create_decoder(alias, has_snakecase=True, prefix='decode')
         decoders.append(decoder)
 
     print('\n'.join(decoders))
 
-def printEverything(someJson):
-    stuff = json.loads(someJson)
-    aliases = createTypeAlias(stuff, typeAliasName='Assignment')
-    decoders = [createDecoder(alias, has_snakecase=True, prefix='decode') for alias in aliases ]
+def print_everything(some_json, alias_name):
+    stuff = json.loads(some_json)
+    aliases = create_type_alias(stuff, type_alias_name=alias_name)
+    decoders = [create_decoder(alias, has_snakecase=True, prefix='decode') for alias in aliases ]
 
     print('\n'.join(aliases))
     print('\n'.join(decoders))
 
 if __name__ == '__main__':
-    printEverything(
-        """{"name":"ghj2True","course":{"completed":false,"created_at":"2016-01-27T09:25:52-06:00","edmodo_id":null,"id":282074,"invite_code":"ex8w7fdd","name":"dasd","premium_license_id":null,"updated_at":"2016-02-18T06:25:09-06:00","user_id":3439703,"premium":false},"start_on":"2016-02-18T09:37:02-06:00","start_immediately":true,"scramble_question_order":true,"accept_late":true,"type":"UnitDiagnostic","previous_test_id":null,"points":0,"has_started":true,"due":"2016-02-27T23:59:00-06:00","questions":20,"mode":1}"""
-        )
+    print_everything(
+"""
+ { "name" : "Noah"
+ , "age" : 23
+ , "location" :
+    { "name" : "sweden"
+    , "days" : 45
+    }
+ }
+"""
+    , alias_name = "Person")
