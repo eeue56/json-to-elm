@@ -1,8 +1,11 @@
 # json-to-elm
 Create Elm type aliases and decoders based on JSON input
 
+`print_everything` takes in a string containing a JSON object, and a top-level name for the alias it will generate.
 
-example:
+It will then recursively generate aliases and decoders for all the JSON objects in the json object.
+
+## Example:
 
 ```python
 
