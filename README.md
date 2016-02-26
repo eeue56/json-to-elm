@@ -9,6 +9,9 @@ It will then recursively generate aliases and decoders for all the JSON objects 
 
 `create_decoder` takes a type alias as a string, along with a prefix to use for custom decoders, and if the encoded fields have snakecase or not, and generates just the decoder for that type alias
 
+`create_encoder` takes a type alias as a string, along with a prefix to use for custom encoders, and if the encoded fields have snakecase or not, and generates just the encoder for that type alias
+
+
 ## Example:
 
 ```python
@@ -54,6 +57,21 @@ decodePerson =
         |: ("age" := int)
         |: ("name" := string)
         |: ("location" := decodeLocation)
+
+encodeLocation : Location -> Json.Encode.Value
+encodeLocation =
+    object
+        [ ("name", string name)
+        , ("days", int days)
+        ]
+encodePerson : Person -> Json.Encode.Value
+encodePerson =
+    object
+        [ ("age", int age)
+        , ("name", string name)
+        , ("location", encodeLocation location)
+        ]
+
 ```
 for more examples of this, see the test function
 

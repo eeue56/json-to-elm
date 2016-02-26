@@ -100,3 +100,44 @@ decode{type_name} =
     """.format(type_name=type_name, fields=formattedFields)
 
     return output.strip()
+
+
+def create_encoder(string, has_snakecase=False, prefix=None, suffix=None):
+    string = re.sub('[\\n\\r]', '', string)
+    type_name = get_type_name(string)
+    original_fields = [field_name_and_type(f) for f in get_fields(string)]
+    fields = original_fields[:]
+
+    if has_snakecase:
+        fields = [
+            (convert_camelcase_to_underscores(name), value)
+                for name, value in fields
+        ]
+
+    fields = [(name, make_guess_at_decoder(type)) for name, type in fields]
+
+    if prefix is not None:
+        fields = [ (name, prefix_decoder(prefix, value)) for name, value in fields ]
+
+    if suffix is not None:
+        fields = [ (name, suffix_decoder(suffix, value)) for name, value in fields ]
+
+    formatted_fields ='\n        , '.join(
+        '("{name}", {type} {original_name})'
+            .format(
+                name=encoded_name,
+                type=' <| '.join(encoder.split(' ')),
+                original_name=original_name
+            )
+            for ((encoded_name, encoder), (original_name, _)) in zip(fields, original_fields))
+
+
+    output = """
+encode{type_name} : {type_name} -> Json.Encode.Value
+encode{type_name} =
+    object
+        [ {fields}
+        ]
+    """.format(type_name=type_name, fields=formatted_fields)
+
+    return output.strip()

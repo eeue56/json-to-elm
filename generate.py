@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 import json
 
 from type_alias import create_type_alias
-from decoder import create_decoder
+from decoder import create_decoder, create_encoder
 from helpers import *
 
 
@@ -33,9 +33,12 @@ def print_everything(some_json, alias_name):
     stuff = json.loads(some_json)
     aliases = create_type_alias(stuff, type_alias_name=alias_name)
     decoders = [create_decoder(alias, has_snakecase=True, prefix='decode') for alias in aliases ]
+    encoders = [create_encoder(alias, has_snakecase=True, prefix='encode') for alias in aliases ]
 
     print('\n'.join(aliases))
     print('\n'.join(decoders))
+    print('\n'.join(encoders))
+
 
 if __name__ == '__main__':
     print_everything(
