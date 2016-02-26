@@ -11,9 +11,14 @@ from helpers import *
 
 def test():
     testJson = """
-{"some_list": [1, 2, 3], "name":"ghj2True",
-"course":{"completed":false,"created_at":"2016-01-27T09:25:52-06:00","edmodo_id":null,"id":282074,"invite_code":"ex8w7fdd","name":"dasd","premium_license_id":null,"updated_at":"2016-02-18T06:25:09-06:00","user_id":3439703,"premium":false},"start_on":"2016-02-18T09:37:02-06:00","start_immediately":true,"scramble_question_order":true,"accept_late":true,"type":"UnitDiagnostic","previous_test_id":null,"points":0,"has_started":true,"due":"2016-02-27T23:59:00-06:00","questions":20,"mode":1}
-    """
+ { "name" : "Noah"
+ , "age" : 23
+ , "location" :
+    { "name" : "sweden"
+    , "days" : 45
+    }
+ }
+ """
 
     stuff = json.loads(testJson)
     print('Creating type alias')
