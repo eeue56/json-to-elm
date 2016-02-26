@@ -13,6 +13,9 @@ It will then recursively generate aliases and decoders for all the JSON objects 
 
 `create_union_type_decoder` takes a union type definition as a string, and will generate the decoder needed if the json value is a string
 
+`create_union_type_encoder` takes a union type definition as a string, and will generate the encoder needed if the json value is a string
+
+
 
 ## Example:
 
@@ -61,17 +64,17 @@ decodePerson =
         |: ("location" := decodeLocation)
 
 encodeLocation : Location -> Json.Encode.Value
-encodeLocation =
+encodeLocation record =
     object
-        [ ("name", string name)
-        , ("days", int days)
+        [ ("name", string record.name)
+        , ("days", int record.days)
         ]
 encodePerson : Person -> Json.Encode.Value
-encodePerson =
+encodePerson record =
     object
-        [ ("age", int age)
-        , ("name", string name)
-        , ("location", encodeLocation location)
+        [ ("age", int record.age)
+        , ("name", string record.name)
+        , ("location", encodeLocation record.location)
         ]
 
 ```
@@ -79,7 +82,8 @@ for more examples of this, see the test function
 
 
 ```python
-print(('type Action = Run | Hide | Noop'))
+print(create_union_type_decoder('type Action = Run | Hide | Noop'))
+print(create_union_type_encoder('type Action = Run | Hide | Noop'))
 ```
 
 will print
@@ -94,4 +98,10 @@ decodeAction =
                 "Hide" -> Hide
                 "Noop" -> Noop
         )
+encodeAction : Action -> Json.Encode.Value
+encodeAction item =
+    case item of
+        Run -> string "Run"
+        Hide -> string "Hide"
+        Noop -> string "Noop"
 ```

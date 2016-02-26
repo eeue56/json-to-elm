@@ -141,7 +141,7 @@ def create_encoder(string, has_snakecase=False, prefix=None, suffix=None):
         fields = [ (name, suffix_decoder(suffix, value)) for name, value in fields ]
 
     formatted_fields ='\n        , '.join(
-        '("{name}", {type} {original_name})'
+        '("{name}", {type} record.{original_name})'
             .format(
                 name=encoded_name,
                 type=' <| '.join(encoder.split(' ')),
@@ -152,7 +152,7 @@ def create_encoder(string, has_snakecase=False, prefix=None, suffix=None):
 
     output = """
 encode{type_name} : {type_name} -> Json.Encode.Value
-encode{type_name} =
+encode{type_name} record =
     object
         [ {fields}
         ]
@@ -185,6 +185,31 @@ decode{type_name} =
             case string of
                 {patterns}
         )
+""".format(type_name=type_name, patterns=formatted_constructors)
+
+    return output.strip()
+
+def create_union_type_encoder(string, has_snakecase=False):
+    """
+        string is a union type that looks like
+            type Action = Noop | Run
+    """
+    string = re.sub('[\\n\\r]', '', string)
+
+    type_name = get_union_type_name(string)
+    constructors = get_constructors(string)
+
+    formatted_constructors = '\n        '.join(
+        '{constructor} -> string "{constructor}"'.format(constructor=constructor) for constructor in constructors
+        )
+
+
+    output = """
+
+encode{type_name} : {type_name} -> Json.Encode.Value
+encode{type_name} item =
+    case item of
+        {patterns}
 """.format(type_name=type_name, patterns=formatted_constructors)
 
     return output.strip()
