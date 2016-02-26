@@ -11,7 +11,7 @@ KNOWN_DECODERS = [
     'bool',
     'string' ]
 
-def get_type_name(string):
+def get_type_alias_name(string):
     grab_type_name = re.search('type alias(.+)\=', string)
 
     if grab_type_name is None or len(grab_type_name.groups()) == 0:
@@ -24,15 +24,33 @@ def get_type_name(string):
 
     return groups[0].strip()
 
-def get_fields(string):
-    grabFields = re.match(".*{(.+)\}", string)
+def get_union_type_name(string):
+    grab_type_name = re.search('type (.+)\=', string)
 
-    if grabFields is None or len(grabFields.groups()) == 0:
+    if grab_type_name is None or len(grab_type_name.groups()) == 0:
+        raise Exception("Can't find type declaration")
+
+    groups = grab_type_name.groups()
+
+    if len(groups) > 1:
+        raise "Please only give me one type at a time"
+
+    return groups[0].strip()
+
+
+def get_fields(string):
+    grab_fields = re.match(".*{(.+)\}", string)
+
+    if grab_fields is None or len(grab_fields.groups()) == 0:
         raise Exception("Please give me a field I can work with")
 
-    groups = grabFields.groups()
+    groups = grab_fields.groups()
 
     return groups[0].split(',')
+
+def get_constructors(string):
+    string = string[string.index('=') + 1:]
+    return [part.strip() for part in string.split('|')]
 
 def field_name_and_type(string):
     splitted = string.split(':')
@@ -64,7 +82,7 @@ def suffix_decoder(suffix, value):
 
 def create_decoder(string, has_snakecase=False, prefix=None, suffix=None):
     string = re.sub('[\\n\\r]', '', string)
-    type_name = get_type_name(string)
+    type_name = get_type_alias_name(string)
     fields = [field_name_and_type(f) for f in get_fields(string)]
 
     if has_snakecase:
@@ -104,7 +122,7 @@ decode{type_name} =
 
 def create_encoder(string, has_snakecase=False, prefix=None, suffix=None):
     string = re.sub('[\\n\\r]', '', string)
-    type_name = get_type_name(string)
+    type_name = get_type_alias_name(string)
     original_fields = [field_name_and_type(f) for f in get_fields(string)]
     fields = original_fields[:]
 
@@ -139,5 +157,34 @@ encode{type_name} =
         [ {fields}
         ]
     """.format(type_name=type_name, fields=formatted_fields)
+
+    return output.strip()
+
+
+def create_union_type_decoder(string, has_snakecase=False):
+    """
+        string is a union type that looks like
+            type Action = Noop | Run
+    """
+    string = re.sub('[\\n\\r]', '', string)
+
+    type_name = get_union_type_name(string)
+    constructors = get_constructors(string)
+
+    formatted_constructors = '\n                '.join(
+        '"{constructor}" -> {constructor}'.format(constructor=constructor) for constructor in constructors
+        )
+
+
+    output = """
+
+decode{type_name} : Decoder {type_name}
+decode{type_name} =
+    string
+        |> (\string ->
+            case string of
+                {patterns}
+        )
+""".format(type_name=type_name, patterns=formatted_constructors)
 
     return output.strip()

@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 import json
 
 from type_alias import create_type_alias
-from decoder import create_decoder, create_encoder
+from decoder import create_decoder, create_encoder, create_union_type_decoder
 from helpers import *
 
 
@@ -52,3 +52,5 @@ if __name__ == '__main__':
  }
 """
     , alias_name = "Person")
+
+    print(create_union_type_decoder('type Action = Run | Hide | Noop'))

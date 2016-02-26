@@ -11,6 +11,8 @@ It will then recursively generate aliases and decoders for all the JSON objects 
 
 `create_encoder` takes a type alias as a string, along with a prefix to use for custom encoders, and if the encoded fields have snakecase or not, and generates just the encoder for that type alias
 
+`create_union_type_decoder` takes a union type definition as a string, and will generate the decoder needed if the json value is a string
+
 
 ## Example:
 
@@ -76,3 +78,20 @@ encodePerson =
 for more examples of this, see the test function
 
 
+```python
+print(('type Action = Run | Hide | Noop'))
+```
+
+will print
+
+```elm
+decodeAction : Decoder Action
+decodeAction =
+    string
+        |> (\string ->
+            case string of
+                "Run" -> Run
+                "Hide" -> Hide
+                "Noop" -> Noop
+        )
+```
