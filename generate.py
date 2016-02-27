@@ -1,8 +1,9 @@
 from __future__ import print_function, unicode_literals
 
 import json
+import sys
 
-from type_alias import create_type_alias
+from type_alias import create_type_alias, find_type_aliases, find_union_types
 from decoder import create_decoder, create_encoder, create_union_type_decoder, create_union_type_encoder
 from helpers import *
 
@@ -34,18 +35,6 @@ def test():
 
     print('\n'.join(decoders))
 
-def print_everything(some_json, alias_name):
-    stuff = json.loads(some_json)
-    aliases = create_type_alias(stuff, type_alias_name=alias_name)
-    decoders = [create_decoder(alias, has_snakecase=True, prefix='decode') for alias in aliases ]
-    encoders = [create_encoder(alias, has_snakecase=True, prefix='encode') for alias in aliases ]
-
-    print('\n'.join(aliases))
-    print('\n'.join(decoders))
-    print('\n'.join(encoders))
-
-
-if __name__ == '__main__':
     print_everything(
 """
  { "name" : "Noah"
@@ -60,3 +49,68 @@ if __name__ == '__main__':
 
     print(create_union_type_decoder('type Action = Run | Hide | Noop'))
     print(create_union_type_encoder('type Action = Run | Hide | Noop'))
+
+def print_everything(some_json, alias_name):
+    stuff = json.loads(some_json)
+    aliases = create_type_alias(stuff, type_alias_name=alias_name)
+    decoders = [create_decoder(alias, has_snakecase=True, prefix='decode') for alias in aliases ]
+    encoders = [create_encoder(alias, has_snakecase=True, prefix='encode') for alias in aliases ]
+
+    print('\n'.join(aliases))
+    print('\n'.join(decoders))
+    print('\n'.join(encoders))
+
+def from_elm_file(file_text):
+    aliases = find_type_aliases(file_text)
+    unions = find_union_types(file_text)
+
+
+    decoders = [create_decoder(alias, has_snakecase=True, prefix='decode') for alias in aliases ]
+    decoders.extend(create_union_type_decoder(union_type) for union_type in unions)
+    encoders = [create_encoder(alias, has_snakecase=True, prefix='encode') for alias in aliases ]
+    encoders.extend(create_union_type_encoder(union_type) for union_type in unions)
+
+    print('\n'.join(decoders))
+    print('\n'.join(encoders))
+
+
+
+text ="""
+
+type Action =
+    Run | Hide
+
+type alias Location =
+    { name : String
+    , days : Int
+    }
+
+
+type alias Person =
+    { age : Int
+    , name : String
+    , location : Location
+    }
+
+location =
+    { name = "Noah"
+    , days = 45
+    }
+
+view =
+    div [] []
+"""
+
+def main():
+    if len(sys.argv) < 2:
+        print('Give me some elm file names and I\'ll give you decoders and encoders')
+        return
+
+
+    for arg in sys.argv[1:]:
+        with open(arg) as f:
+            from_elm_file(f.read())
+
+
+if __name__ == '__main__':
+    main()

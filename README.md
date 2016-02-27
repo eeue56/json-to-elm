@@ -16,6 +16,25 @@ It will then recursively generate aliases and decoders for all the JSON objects 
 `create_union_type_encoder` takes a union type definition as a string, and will generate the encoder needed if the json value is a string
 
 
+You can also run this program as a command line tool:
+
+```elm
+Noahs-MacBook-Pro:json-to-elm noah$ python generate.py ../elm-static-site/examples/Users.elm
+decodeUser : Decoder User
+decodeUser =
+    succeed User
+        |: ("name" := string)
+        |: ("location" := string)
+        |: ("age" := int)
+encodeUser : User -> Json.Encode.Value
+encodeUser record =
+    object
+        [ ("name", string record.name)
+        , ("location", string record.location)
+        , ("age", int record.age)
+        ]
+```
+
 
 ## Example:
 

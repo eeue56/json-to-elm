@@ -67,3 +67,33 @@ type alias {name} =
     )
 
     return extra_aliases
+
+
+def find_type_aliases(string):
+    string = re.sub('[\\n\\r]', '', string)
+
+    grab_type_aliases = re.findall('type alias.+?\=.+?}', string)
+
+    if grab_type_aliases is None or len(grab_type_aliases) == 0:
+        return []
+
+    return grab_type_aliases
+
+def find_union_types(string):
+    matches = []
+
+    string = string.replace('type alias', 'asdf')
+    grab_union_types = re.findall('type .+?\=.+', string, re.DOTALL)
+
+    for match in grab_union_types:
+        build_up = []
+
+        for line in match.split('\n'):
+            if len(build_up) > 1 and not line.startswith(' '):
+                break
+
+            build_up.append(line)
+
+        matches.append(''.join(build_up))
+
+    return matches
