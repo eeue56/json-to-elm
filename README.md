@@ -1,22 +1,8 @@
 # json-to-elm
 Create Elm type aliases and decoders based on JSON input
 
-`print_everything` takes in a string containing a JSON object, and a top-level name for the alias it will generate.
 
-It will then recursively generate aliases and decoders for all the JSON objects in the json object.
-
-`create_type_alias` takes a json object, and returns a list of type aliases needed for that object
-
-`create_decoder` takes a type alias as a string, along with a prefix to use for custom decoders, and if the encoded fields have snakecase or not, and generates just the decoder for that type alias
-
-`create_encoder` takes a type alias as a string, along with a prefix to use for custom encoders, and if the encoded fields have snakecase or not, and generates just the encoder for that type alias
-
-`create_union_type_decoder` takes a union type definition as a string, and will generate the decoder needed if the json value is a string
-
-`create_union_type_encoder` takes a union type definition as a string, and will generate the encoder needed if the json value is a string
-
-
-You can also run this program as a command line tool:
+You can run this program as a command line tool:
 
 ```elm
 Noahs-MacBook-Pro:json-to-elm noah$ python generate.py ../elm-static-site/examples/Users.elm
@@ -34,6 +20,21 @@ encodeUser record =
         , ("age", int record.age)
         ]
 ```
+
+`print_everything` takes in a string containing a JSON object, and a top-level name for the alias it will generate.
+
+It will then recursively generate aliases and decoders for all the JSON objects in the json object.
+
+`create_type_alias` takes a json object, and returns a list of type aliases needed for that object
+
+`create_decoder` takes a type alias as a string, along with a prefix to use for custom decoders, and if the encoded fields have snakecase or not, and generates just the decoder for that type alias
+
+`create_encoder` takes a type alias as a string, along with a prefix to use for custom encoders, and if the encoded fields have snakecase or not, and generates just the encoder for that type alias
+
+`create_union_type_decoder` takes a union type definition as a string, and will generate the decoder needed if the json value is a string
+
+`create_union_type_encoder` takes a union type definition as a string, and will generate the encoder needed if the json value is a string
+
 
 
 ## Example:
