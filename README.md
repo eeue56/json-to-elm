@@ -1,6 +1,11 @@
 # json-to-elm
 Create Elm type aliases and decoders based on JSON input
 
+This project allows you to automate the creation of:
+
+- type aliases from JSON data
+- decoders from type aliases and some union types
+- encoders from type aliases and some union types
 
 You can run this program as a command line tool:
 
@@ -20,6 +25,8 @@ encodeUser record =
         , ("age", int record.age)
         ]
 ```
+
+or you can use the following functions:
 
 `print_everything` takes in a string containing a JSON object, and a top-level name for the alias it will generate.
 
