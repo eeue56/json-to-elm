@@ -26,6 +26,8 @@ encodeUser record =
         ]
 ```
 
+You can also give it a json file.
+
 or you can use the following functions:
 
 `print_everything` takes in a string containing a JSON object, and a top-level name for the alias it will generate.
