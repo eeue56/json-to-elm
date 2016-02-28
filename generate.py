@@ -104,12 +104,23 @@ view =
 def main():
     if len(sys.argv) < 2:
         print('Give me some elm file names and I\'ll give you decoders and encoders')
+        print('Or give me some json files and I\'ll give you a type alias and decoders and encoders')
         return
 
 
     for arg in sys.argv[1:]:
-        with open(arg) as f:
-            from_elm_file(f.read())
+        if arg.endswith('.elm'):
+            print('Generating decoders and encoders for {name}'.format(name=arg))
+            with open(arg) as f:
+                from_elm_file(f.read())
+
+        if arg.endswith('.json'):
+            print('Generating type alias, decoders and encoders from {name}'.format(name=arg))
+            with open(arg) as f:
+                arg = arg.split('/')[-1]
+                name = arg.split('.')[0].capitalize()
+                print_everything(f.read(), name)
+
 
 
 if __name__ == '__main__':
