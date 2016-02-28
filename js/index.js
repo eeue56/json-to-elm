@@ -176,11 +176,29 @@ var createEncoder = function(alias, has_snakecase, prefix, suffix){
     output += `Json.Encode.Value\nencode${typeName} record =\n    object\n        [ ${fields}\n        ]`;
 
     return output.trim();
-
 };
 
-var alias = createTypeAlias({name: 'hello', age:15}, 'User');
+var createEverything = function(string, name){
+    var json = JSON.parse(string);
+    var output = [];
 
-console.log(alias[0]);
-console.log(createDecoder(alias[0]));
-console.log(createEncoder(alias[0]));
+    createTypeAlias(json, name).map(function(alias){
+        output.push(alias);
+        output.push(createDecoder(alias));
+        output.push(createEncoder(alias));
+    });
+
+    return output.join('\n')
+};
+
+var blob = JSON.stringify(
+    { name: 'hello'
+    , age:15
+    , location:
+        { name : 'Sweden'
+        , days: 15.5
+        }
+     }
+);
+
+console.log(createEverything(blob, 'User'));
