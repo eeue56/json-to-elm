@@ -50,7 +50,7 @@ viewAll : List String -> Html
 viewAll aliases =
     let
         output =
-            String.join "\n\n" (aliases ++ (List.map TypeAlias.createDecoder aliases))
+            String.join "\n\n" (aliases ++ (List.map TypeAlias.createDecoder aliases) ++ (List.map TypeAlias.createEncoder aliases))
     in
         textarea
             [ value <| output

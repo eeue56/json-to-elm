@@ -130,9 +130,22 @@ guessDecoder typeName =
     else
         "decode" ++ (capitalize typeName)
 
+guessEncoder : String -> String
+guessEncoder typeName =
+    if List.member typeName knownDecoders then
+        typeName
+    else
+        "encode" ++ (capitalize typeName)
+
+
 formatDecoderField : (String, String) -> String
 formatDecoderField (key, value) =
-    ":| (" ++ key ++ " := " ++ ( guessDecoder <| String.toLower value) ++ ")"
+    "|: (" ++ key ++ " := " ++ ( guessDecoder <| String.toLower value) ++ ")"
+
+
+formatEncoderField : (String, String) -> String
+formatEncoderField (key, value) =
+    "(\"" ++ key ++ "\",  " ++ ( String.join " <| "<| String.split " " <| guessEncoder <| String.toLower value) ++ " record." ++ key ++  ")"
 
 createDecoder : String -> String
 createDecoder string =
@@ -163,4 +176,35 @@ createDecoder string =
             , typeName
             , "\n        "
             , fields
+            ]
+
+createEncoder : String -> String
+createEncoder string =
+    let
+        withoutNewlines =
+            replace All (regex "\\n") (\_ -> "") string
+                |> Debug.log "n"
+        typeName =
+            getTypeAliasName withoutNewlines
+                |> Debug.log "alias"
+                |> Maybe.withDefault ""
+
+        fields =
+            getFields withoutNewlines
+                |> List.map getFieldNameAndType
+                |> List.map formatEncoderField
+                |> String.join "\n        , "
+
+    in
+        String.join ""
+            [ "encode"
+            , typeName
+            , " : "
+            , typeName
+            , " -> Json.Encode.Value"
+            , "\nencode"
+            , typeName
+            , " record =\n     object\n        [ "
+            , fields
+            , "\n        ]"
             ]
