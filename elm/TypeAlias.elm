@@ -1,8 +1,18 @@
 module TypeAlias where
 
 import String
+import Regex exposing (..)
 import Types
 import Json.Encode as Json
+
+knownDecoders =
+    [ "maybe"
+    , "list"
+    , "int"
+    , "float"
+    , "bool"
+    , "string"
+    ]
 
 capitalize : String -> String
 capitalize name =
@@ -69,3 +79,88 @@ createTypeAlias stuff aliasName =
             List.foldl update [] fields
     in
         (aliasFormat aliasName fixedFields) :: extraAliases
+
+
+
+
+getTypeAliasName : String -> Maybe String
+getTypeAliasName string =
+    let
+        pattern =
+            regex "type alias(.+)\\="
+    in
+        case find (All) pattern string of
+            [] -> Nothing
+            [x] ->
+                Just <| String.trim <| String.join "" <| List.map (Maybe.withDefault "") x.submatches
+            _ ->
+                Debug.log "too much" Nothing
+
+getFields : String -> List String
+getFields string =
+    let
+        withoutNewlines =
+            replace All (regex "\\n") (\_ -> "") string
+        pattern =
+            regex "\\{(.+)\\}"
+    in
+        case find (All) pattern withoutNewlines of
+            [] ->
+                Debug.log "no matches" []
+            [x] ->
+                List.map (Maybe.withDefault "") x.submatches
+                    |> String.join ""
+                    |> String.split ","
+                    |> List.map String.trim
+            xs ->
+                Debug.log ("too many matches") []
+
+
+getFieldNameAndType : String -> (String, String)
+getFieldNameAndType string =
+    case String.split ":" string of
+        [] -> ("", "")
+        [x] -> (x, "")
+        x::y::xs -> (String.trim x, String.trim y)
+
+guessDecoder : String -> String
+guessDecoder typeName =
+    if List.member typeName knownDecoders then
+        typeName
+    else
+        "decode" ++ (capitalize typeName)
+
+formatDecoderField : (String, String) -> String
+formatDecoderField (key, value) =
+    ":| (" ++ key ++ " := " ++ ( guessDecoder <| String.toLower value) ++ ")"
+
+createDecoder : String -> String
+createDecoder string =
+    let
+        withoutNewlines =
+            replace All (regex "\\n") (\_ -> "") string
+                |> Debug.log "n"
+        typeName =
+            getTypeAliasName withoutNewlines
+                |> Debug.log "alias"
+                |> Maybe.withDefault ""
+
+        fields =
+            getFields withoutNewlines
+                |> List.map getFieldNameAndType
+                |> List.map formatDecoderField
+                |> String.join "\n        "
+
+    in
+        String.join ""
+            [ "decode"
+            , typeName
+            , " : Decoder "
+            , typeName
+            , "\ndecode"
+            , typeName
+            , " =\n succeed "
+            , typeName
+            , "\n        "
+            , fields
+            ]
