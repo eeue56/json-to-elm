@@ -60,3 +60,9 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+
+# elm stuff
+
+elm.js
+elm-stuff/
