@@ -80,7 +80,6 @@ var make = function make(elm) {
     };
 
     var unsafeGet = function(name, obj){
-        console.log(name, obj);
         return obj[name];
     };
 
