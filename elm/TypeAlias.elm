@@ -1,6 +1,7 @@
 module TypeAlias where
 
 import String
+import Set
 import Regex exposing (..)
 import Types
 import Json.Encode as Json
@@ -79,6 +80,8 @@ createTypeAlias stuff aliasName =
             List.foldl update [] fields
     in
         (aliasFormat aliasName fixedFields) :: extraAliases
+            |> Set.fromList
+            |> Set.toList
 
 
 
