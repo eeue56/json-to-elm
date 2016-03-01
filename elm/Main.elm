@@ -63,26 +63,47 @@ viewInput address alias =
     textarea
         [ on "input" targetValue (Signal.message address << UpdateInput)
         , style [ ("width", "40%"), ("height", "500px") ]
+        , placeholder "Put a valid JSON object in here!"
         ]
-        [ text <| model.input ]
+        [ text <| alias ]
+
+viewNameSelect : Signal.Address Action -> String -> Html
+viewNameSelect address name =
+    div
+        []
+        [ label [] [ text "Enter a toplevel alias name here: "]
+        , input
+            [ on "input" targetValue (Signal.message address << UpdateName)
+            , style [ ("top", "0px") ]
+            ]
+            [ text <| name]
+        ]
 
 
 view : Signal.Address Action -> Model -> Html
 view address model =
     let
         aliases =
-            TypeAlias.createTypeAlias (Types.toValue model.input) "User"
+            if String.trim model.input == "" then
+                []
+            else
+                TypeAlias.createTypeAlias (Types.toValue model.input) model.name
     in
-    div
-        []
-        [ viewInput address model.input, viewAll aliases ]
+        div
+            []
+            [ viewNameSelect address model.name
+            , viewInput address model.input
+            , viewAll aliases
+            ]
 
 type Action
     = UpdateInput String
+    | UpdateName String
     | Noop
 
 type alias Model =
     { input : String
+    , name : String
     }
 
 update : Action -> Model -> (Model, Effects.Effects Action)
@@ -92,9 +113,13 @@ update action model =
             (model, Effects.none)
         UpdateInput input ->
             ( { model | input = input }, Effects.none)
+        UpdateName name ->
+            ( { model | name = name }, Effects.none)
 
 model =
-    { input = ""}
+    { input = ""
+    , name = ""
+    }
 
 app =
     StartApp.start { init = (model, Effects.none), view = view, update = update, inputs = [] }
