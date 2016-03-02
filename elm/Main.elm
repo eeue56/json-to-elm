@@ -12,21 +12,6 @@ import StartApp
 import Effects
 import Task
 
-textStuff =
-    """
-{
-    "name": "Dave",
-    "age" : 15,
-    "location" : {
-        "name" : "Sweden",
-        "days" : 25.5
-    }
-}
-    """
-
-
-
-aliases = TypeAlias.createTypeAlias (Types.toValue textStuff) "User"
 
 viewAlias : String -> Html
 viewAlias alias =
@@ -79,6 +64,12 @@ viewNameSelect address name =
             [ text <| name]
         ]
 
+viewErrors : Signal.Address Action -> List String -> Html
+viewErrors address errors =
+    ul
+        []
+        ((List.map (\error -> li [] [ text error ]) errors))
+
 
 view : Signal.Address Action -> Model -> Html
 view address model =
@@ -87,13 +78,16 @@ view address model =
             if String.trim model.input == "" then
                 []
             else
-                TypeAlias.createTypeAlias (Types.toValue model.input) model.name
+                TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
+                    |> Debug.log "name"
+                    |> List.map TypeAlias.aliasFormat
     in
         div
             []
             [ viewNameSelect address model.name
             , viewInput address model.input
             , viewAll aliases
+            , viewErrors address model.errors
             ]
 
 type Action
@@ -104,6 +98,7 @@ type Action
 type alias Model =
     { input : String
     , name : String
+    , errors : List String
     }
 
 update : Action -> Model -> (Model, Effects.Effects Action)
@@ -119,6 +114,7 @@ update action model =
 model =
     { input = ""
     , name = ""
+    , errors = []
     }
 
 app =
