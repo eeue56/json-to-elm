@@ -55,7 +55,7 @@ aliasFormat alias =
             , "\n    }"
             ]
 
-generateFields : Json.Value -> String -> List (String, String, String, Json.Value)
+generateFields : Json.Value -> String -> List WithBase
 generateFields stuff base =
     Types.keys stuff
         |> List.map (\key ->
@@ -66,7 +66,7 @@ generateFields stuff base =
                     Types.suggestType value
             in
                 if name == "Something" then
-                    generateFields value (base ++ key)
+                    generateFields value (base ++ key) ++ [(base, key, name, value)]
                 else
                     [(base, key, name, value)]
             )
@@ -78,32 +78,32 @@ type alias WithBase =
 type alias FieldWithoutBase =
     (String, String, Json.Value)
 
-gatherAliases : List (String, String, String, Json.Value) -> List (String, String, String, Json.Value)
+gatherAliases : List WithBase -> List WithBase
 gatherAliases items =
     items
         |> List.filter (\(base, key, name, value) -> name == "Something")
 
-resolveConflicts : List WithBase -> (List FieldWithoutBase, List FieldWithoutBase)
+resolveConflicts : List WithBase -> List WithBase
 resolveConflicts items =
     let
 
-        names : List String
-        names =
-            List.map (\(b, k, name, v) -> name) items
+        keys : List String
+        keys =
+            List.map (\(b, key, n, v) -> key) items
 
         count : String -> Int
-        count incomingName =
-            List.filter (\name -> name == incomingName) names
+        count incomingKey =
+            List.filter (\key -> key == incomingKey) keys
                 |> List.length
 
-        update : WithBase -> (List FieldWithoutBase, List FieldWithoutBase) -> (List FieldWithoutBase, List FieldWithoutBase)
-        update (base, key, name, value) (needFixing, fine) =
-            if count name > 1 then
-                ((key, name, value) :: needFixing, fine)
+        update : WithBase -> List WithBase -> List WithBase
+        update (base, key, name, value) fine =
+            if count key > 1 then
+                (base, key, capitalize base ++ capitalize key, value) :: fine
             else
-                (needFixing, (key, name, value) :: fine)
+                (base, key, capitalize key, value) :: fine
     in
-        List.foldl update ([], []) items
+        List.foldl update [] items
 
 {-|
 
@@ -131,11 +131,14 @@ createTypeAliases stuff aliasName base =
     let
         fields =
             generateFields stuff base
+            |> Debug.log "fields"
         aliases =
             gatherAliases fields
+                |> Debug.log "gathered"
+                |> resolveConflicts
                 |> List.map (\(base, key, name, value) -> createTypeAlias value key base)
     in
-        (createTypeAlias stuff aliasName base) :: aliases
+        createTypeAlias stuff aliasName base :: aliases
 
 
 isAlreadyAName : String -> List TypeAlias -> Bool
@@ -212,10 +215,8 @@ createDecoder string =
     let
         withoutNewlines =
             replace All (regex "\\n") (\_ -> "") string
-                |> Debug.log "n"
         typeName =
             getTypeAliasName withoutNewlines
-                |> Debug.log "alias"
                 |> Maybe.withDefault ""
 
         fields =
@@ -243,10 +244,8 @@ createEncoder string =
     let
         withoutNewlines =
             replace All (regex "\\n") (\_ -> "") string
-                |> Debug.log "n"
         typeName =
             getTypeAliasName withoutNewlines
-                |> Debug.log "alias"
                 |> Maybe.withDefault ""
 
         fields =
