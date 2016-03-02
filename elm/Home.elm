@@ -95,6 +95,12 @@ viewInput address alias =
         ]
         [ text <| alias ]
 
+viewErrors : Signal.Address Action -> List String -> Html
+viewErrors address errors =
+    ul
+        []
+        ((List.map (\error -> li [] [ text error ]) errors))
+
 
 aliasCss : Css.Snippet
 aliasCss =
@@ -129,7 +135,9 @@ view address model =
             if String.trim model.input == "" then
                 []
             else
-                TypeAlias.createTypeAlias (Types.toValue model.input) model.name
+                TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
+                    |> Debug.log "name"
+                    |> List.map TypeAlias.aliasFormat
     in
         div
             [ class [ Content ] ]

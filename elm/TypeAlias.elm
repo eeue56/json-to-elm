@@ -2,6 +2,7 @@ module TypeAlias where
 
 import String
 import Set
+import Dict exposing (Dict)
 import Regex exposing (..)
 import Types
 import Json.Encode as Json
@@ -15,6 +16,15 @@ knownDecoders =
     , "string"
     ]
 
+type alias TypeAlias =
+    { name : String
+    , fields : Dict String String
+    , base : String
+    }
+
+type alias Field =
+    (String, String)
+
 capitalize : String -> String
 capitalize name =
     case String.toList name of
@@ -23,67 +33,114 @@ capitalize name =
         x::xs ->
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
 
-fieldFormat : (String, String) -> String
+fieldFormat : Field -> String
 fieldFormat (key, typeName) =
     key ++ " : " ++ typeName
 
 
-aliasFormat : String -> List (String, String) -> String
-aliasFormat aliasName fields =
+aliasFormat : TypeAlias -> String
+aliasFormat alias =
     let
         joinedFields =
-            List.map fieldFormat fields
+            Dict.toList alias.fields
+                |> List.map fieldFormat
                 |> String.join "\n    , "
     in
 
         String.join ""
             [ "type alias "
-            , aliasName
+            , alias.name
             , " =\n    { "
             , joinedFields
             , "\n    }"
             ]
 
+generateFields : Json.Value -> String -> List (String, String, String, Json.Value)
+generateFields stuff base =
+    Types.keys stuff
+        |> List.map (\key ->
+            let
+                value =
+                    Types.unsafeGet key stuff
+                name =
+                    Types.suggestType value
+            in
+                if name == "Something" then
+                    generateFields value (base ++ key)
+                else
+                    [(base, key, name, value)]
+            )
+        |> List.concat
 
-createTypeAlias : Json.Value -> String -> List String
-createTypeAlias stuff aliasName =
+type alias WithBase =
+    (String, String, String, Json.Value)
+
+type alias FieldWithoutBase =
+    (String, String, Json.Value)
+
+gatherAliases : List (String, String, String, Json.Value) -> List (String, String, String, Json.Value)
+gatherAliases items =
+    items
+        |> List.filter (\(base, key, name, value) -> name == "Something")
+
+resolveConflicts : List WithBase -> (List FieldWithoutBase, List FieldWithoutBase)
+resolveConflicts items =
     let
-        fields : List (String, String, Json.Value)
-        fields =
-            Types.keys stuff
-                |> List.map (\key ->
-                    let
-                        value =
-                            Types.unsafeGet key stuff
-                    in
-                        (key, Types.suggestType value, value)
-                    )
 
-        fixedFields =
-            fields
-                |> List.map (\(key, typeName, _) ->
-                    case typeName of
-                        "Something" ->
-                            (key, capitalize key)
-                        _ ->
-                            (key, typeName)
-                    )
+        names : List String
+        names =
+            List.map (\(b, k, name, v) -> name) items
 
-        update (key, typeName, value) extras =
-            case typeName of
-                "Something" ->
-                    (createTypeAlias value (capitalize key)) ++ extras
-                _ ->
-                    extras
+        count : String -> Int
+        count incomingName =
+            List.filter (\name -> name == incomingName) names
+                |> List.length
 
-        extraAliases =
-            List.foldl update [] fields
+        update : WithBase -> (List FieldWithoutBase, List FieldWithoutBase) -> (List FieldWithoutBase, List FieldWithoutBase)
+        update (base, key, name, value) (needFixing, fine) =
+            if count name > 1 then
+                ((key, name, value) :: needFixing, fine)
+            else
+                (needFixing, (key, name, value) :: fine)
     in
-        (aliasFormat aliasName fixedFields) :: extraAliases
-            |> Set.fromList
-            |> Set.toList
+        List.foldl update ([], []) items
+
+{-|
+
+Looks like
+{ Foo : TypeAlias
+, FooFoo : TypeAlias
+}
+
+-}
+createTypeAlias : Json.Value -> String -> String -> TypeAlias
+createTypeAlias stuff aliasName base =
+    let
+        fields =
+            generateFields stuff base
+                |> List.map (\(_, key, name, _) -> (key, name))
+                |> Dict.fromList
+    in
+        { name = aliasName
+        , fields = fields
+        , base = base
+        }
+
+createTypeAliases : Json.Value -> String -> String -> List TypeAlias
+createTypeAliases stuff aliasName base =
+    let
+        fields =
+            generateFields stuff base
+        aliases =
+            gatherAliases fields
+                |> List.map (\(base, key, name, value) -> createTypeAlias value key base)
+    in
+        (createTypeAlias stuff aliasName base) :: aliases
 
 
+isAlreadyAName : String -> List TypeAlias -> Bool
+isAlreadyAName name aliases =
+    List.member name (List.map .name aliases)
 
 
 getTypeAliasName : String -> Maybe String
@@ -119,7 +176,7 @@ getFields string =
                 Debug.log ("too many matches") []
 
 
-getFieldNameAndType : String -> (String, String)
+getFieldNameAndType : String -> Field
 getFieldNameAndType string =
     case String.split ":" string of
         [] -> ("", "")
@@ -141,12 +198,12 @@ guessEncoder typeName =
         "encode" ++ (capitalize typeName)
 
 
-formatDecoderField : (String, String) -> String
+formatDecoderField : Field -> String
 formatDecoderField (key, value) =
     "|: (" ++ key ++ " := " ++ ( guessDecoder <| String.toLower value) ++ ")"
 
 
-formatEncoderField : (String, String) -> String
+formatEncoderField : Field -> String
 formatEncoderField (key, value) =
     "(\"" ++ key ++ "\",  " ++ ( String.join " <| "<| String.split " " <| guessEncoder <| String.toLower value) ++ " record." ++ key ++  ")"
 
