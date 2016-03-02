@@ -155,6 +155,7 @@ type Action
 type alias Model =
     { input : String
     , name : String
+    , errors : List String
     }
 
 update : Action -> Model -> (Model, Effects.Effects Action)
@@ -167,7 +168,13 @@ update action model =
         UpdateName name ->
             ( { model | name = name }, Effects.none)
 
+
 model =
-    { input = ""
+    { input = """
+    {"foo": {
+     "foo": "adkljasd"}
+    }
+    """
     , name = ""
+    , errors = []
     }
