@@ -14,6 +14,12 @@ import Task
 import Css exposing (..)
 import Css.Elements as Css
 import Css.Namespace exposing (namespace)
+import Html.CssHelpers
+import ColorScheme exposing (..)
+
+cssNamespace = "homepage"
+
+{ class, classList, id } = Html.CssHelpers.namespace cssNamespace
 
 textStuff =
     """
@@ -28,10 +34,31 @@ textStuff =
     """
 
 
+type CssClasses =
+  Content | Input | Output | Alias
+
 css =
-  (stylesheet << namespace "main")
+  (stylesheet << namespace cssNamespace)
     [ Css.body
-        [ backgroundColor (rgb 30 90 90)
+        [ backgroundColor accent1 ]
+    , (.) Content
+        [ Css.width (px 960)
+        , margin2 zero auto
+        ]
+    , each [ (.) Input, (.) Output ]
+        [ Css.width (pct 40)
+        , Css.height (px 500)
+        , fontFamily monospace
+        ]
+    , (.) Alias
+        [ padding2 (px 20) zero
+        , children
+            [ Css.input
+                [ padding (px 10)
+                , marginLeft (px 10)
+                , Css.width (px 250)
+                ]
+            ]
         ]
     ]
 
@@ -47,11 +74,11 @@ viewJson json =
         []
         [ text <| "The entered json was: " ++ json ]
 
-viewDecoder : String -> Html
-viewDecoder alias =
-    textarea
+viewOutput : String -> Html
+viewOutput alias =
+    node "pre"
         [ value <| TypeAlias.createDecoder alias
-        , style [ ("width", "40%"), ("height", "500px") ]
+        , class [ Output ]
         ]
         [ text <| TypeAlias.createDecoder alias]
 
@@ -63,7 +90,7 @@ viewAll aliases =
     in
         textarea
             [ value <| output
-            , style [ ("width", "40%"), ("height", "500px") ]
+            , class [ Output ]
             ]
             []
 
@@ -71,7 +98,7 @@ viewInput : Signal.Address Action -> String -> Html
 viewInput address alias =
     textarea
         [ on "input" targetValue (Signal.message address << UpdateInput)
-        , style [ ("width", "40%"), ("height", "500px") ]
+        , class [ Input ]
         , placeholder "Put a valid JSON object in here!"
         ]
         [ text <| alias ]
@@ -79,7 +106,7 @@ viewInput address alias =
 viewNameSelect : Signal.Address Action -> String -> Html
 viewNameSelect address name =
     div
-        []
+        [ class [ Alias ] ]
         [ label [] [ text "Enter a toplevel alias name here: "]
         , input
             [ on "input" targetValue (Signal.message address << UpdateName)
@@ -99,10 +126,11 @@ view address model =
                 TypeAlias.createTypeAlias (Types.toValue model.input) model.name
     in
         div
-            []
+            [ class [ Content ] ]
             [ viewNameSelect address model.name
             , viewInput address model.input
             , viewAll aliases
+            , Util.stylesheetLink "/homepage.css"
             ]
 
 type Action
