@@ -50,17 +50,9 @@ css =
         , Css.height (px 500)
         , fontFamily monospace
         ]
-    , (.) Alias
-        [ padding2 (px 20) zero
-        , children
-            [ Css.input
-                [ padding (px 10)
-                , marginLeft (px 10)
-                , Css.width (px 250)
-                ]
-            ]
-        ]
+    , aliasCss
     ]
+
 
 aliases = TypeAlias.createTypeAlias (Types.toValue textStuff) "User"
 
@@ -102,6 +94,20 @@ viewInput address alias =
         , placeholder "Put a valid JSON object in here!"
         ]
         [ text <| alias ]
+
+
+aliasCss : Css.Snippet
+aliasCss =
+    (.) Alias
+        [ padding2 (px 20) zero
+        , children
+            [ Css.input
+                [ padding (px 10)
+                , marginLeft (px 10)
+                , Css.width (px 250)
+                ]
+            ]
+        ]
 
 viewNameSelect : Signal.Address Action -> String -> Html
 viewNameSelect address name =
