@@ -111,26 +111,30 @@ for more examples of this, see the test function
 
 
 ```python
-print(create_union_type_decoder('type Action = Run | Hide | Noop'))
-print(create_union_type_encoder('type Action = Run | Hide | Noop'))
+print(create_union_type_decoder('type Suit = Hearts | Diamonds | Spades | Clubs'))
+print(create_union_type_encoder('type Suit = Hearts | Diamonds | Spades | Clubs'))
 ```
 
 will print
 
 ```elm
-decodeAction : Decoder Action
-decodeAction =
-    string
-        |> (\string ->
+decodeSuit : Decoder Suit
+decodeSuit =
+    let
+        decodeToType string =
             case string of
-                "Run" -> Run
-                "Hide" -> Hide
-                "Noop" -> Noop
-        )
-encodeAction : Action -> Json.Encode.Value
-encodeAction item =
+                "Hearts" -> Result.Ok Hearts
+                "Diamonds" -> Result.Ok Diamonds
+                "Spades" -> Result.Ok Spades
+                "Clubs" -> Result.Ok Clubs
+                _ -> Result.Err "Pattern not found"
+    in
+        customDecoder string decodeToType
+encodeSuit : Suit -> Json.Encode.Value
+encodeSuit item =
     case item of
-        Run -> string "Run"
-        Hide -> string "Hide"
-        Noop -> string "Noop"
+        Hearts -> string "Hearts"
+        Diamonds -> string "Diamonds"
+        Spades -> string "Spades"
+        Clubs -> string "Clubs"
 ```

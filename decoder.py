@@ -172,7 +172,7 @@ def create_union_type_decoder(string, has_snakecase=False):
     constructors = get_constructors(string)
 
     formatted_constructors = '\n                '.join(
-        '"{constructor}" -> {constructor}'.format(constructor=constructor) for constructor in constructors
+        '"{constructor}" -> Result.Ok {constructor}'.format(constructor=constructor) for constructor in constructors
         )
 
 
@@ -180,11 +180,13 @@ def create_union_type_decoder(string, has_snakecase=False):
 
 decode{type_name} : Decoder {type_name}
 decode{type_name} =
-    string
-        |> (\string ->
+    let
+        decodeToType string =
             case string of
                 {patterns}
-        )
+                _ -> Result.Err "Pattern not found"
+    in
+        customDecoder string decodeToType
 """.format(type_name=type_name, patterns=formatted_constructors)
 
     return output.strip()
