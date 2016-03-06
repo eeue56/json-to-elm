@@ -109,6 +109,7 @@ encodePerson record =
 ```
 for more examples of this, see the test function
 
+### Union types
 
 ```python
 print(create_union_type_decoder('type Suit = Hearts | Diamonds | Spades | Clubs'))
