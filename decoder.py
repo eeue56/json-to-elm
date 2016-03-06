@@ -11,6 +11,9 @@ KNOWN_DECODERS = [
     'bool',
     'string' ]
 
+JSON_DECODE = 'Json.Decode.'
+JSON_ENCODE = 'Json.Encode.'
+
 def get_type_alias_name(string):
     grab_type_name = re.search('type alias(.+)\=', string)
 
@@ -64,7 +67,7 @@ def prefix_decoder(prefix, value):
     parts = value.split()
 
     return ' '.join(
-        value
+        JSON_DECODE + value
             if value in KNOWN_DECODERS
             else prefix + value.capitalize()
             for value in parts
@@ -110,9 +113,9 @@ def create_decoder(string, has_snakecase=False, prefix=None, suffix=None):
 
 
     output = """
-decode{type_name} : Decoder {type_name}
+decode{type_name} : Json.Decode.Decoder {type_name}
 decode{type_name} =
-    succeed {type_name}
+    Json.Decode.succeed {type_name}
         {fields}
 
     """.format(type_name=type_name, fields=formattedFields)
@@ -153,7 +156,7 @@ def create_encoder(string, has_snakecase=False, prefix=None, suffix=None):
     output = """
 encode{type_name} : {type_name} -> Json.Encode.Value
 encode{type_name} record =
-    object
+    Json.Encode.object
         [ {fields}
         ]
     """.format(type_name=type_name, fields=formatted_fields)
@@ -178,7 +181,7 @@ def create_union_type_decoder(string, has_snakecase=False):
 
     output = """
 
-decode{type_name} : Decoder {type_name}
+decode{type_name} : Json.Decode.Decoder {type_name}
 decode{type_name} =
     let
         decodeToType string =
@@ -186,7 +189,7 @@ decode{type_name} =
                 {patterns}
                 _ -> Result.Err "Pattern not found"
     in
-        customDecoder string decodeToType
+        customDecoder Json.Decode.string decodeToType
 """.format(type_name=type_name, patterns=formatted_constructors)
 
     return output.strip()
@@ -202,7 +205,7 @@ def create_union_type_encoder(string, has_snakecase=False):
     constructors = get_constructors(string)
 
     formatted_constructors = '\n        '.join(
-        '{constructor} -> string "{constructor}"'.format(constructor=constructor) for constructor in constructors
+        '{constructor} -> Json.Encode.string "{constructor}"'.format(constructor=constructor) for constructor in constructors
         )
 
 

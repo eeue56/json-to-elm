@@ -80,29 +80,31 @@ type alias Person =
     , location : Location
     }
 
-decodeLocation : Decoder Location
+decodeLocation : Json.Decode.Decoder Location
 decodeLocation =
-    succeed Location
-        |: ("name" := string)
-        |: ("days" := int)
-decodePerson : Decoder Person
+    Json.Decode.succeed Location
+        |: ("name" := Json.Decode.string)
+        |: ("days" := Json.Decode.int)
+
+decodePerson : Json.Decode.Decoder Person
 decodePerson =
-    succeed Person
-        |: ("age" := int)
-        |: ("name" := string)
+    Json.Decode.succeed Person
+        |: ("age" := Json.Decode.int)
+        |: ("name" := Json.Decode.string)
         |: ("location" := decodeLocation)
 
 encodeLocation : Location -> Json.Encode.Value
 encodeLocation record =
-    object
-        [ ("name", string record.name)
-        , ("days", int record.days)
+    Json.Encode.object
+        [ ("name", Json.Decode.string record.name)
+        , ("days", Json.Decode.int record.days)
         ]
+
 encodePerson : Person -> Json.Encode.Value
 encodePerson record =
-    object
-        [ ("age", int record.age)
-        , ("name", string record.name)
+    Json.Encode.object
+        [ ("age", Json.Decode.int record.age)
+        , ("name", Json.Decode.string record.name)
         , ("location", encodeLocation record.location)
         ]
 
@@ -119,7 +121,7 @@ print(create_union_type_encoder('type Suit = Hearts | Diamonds | Spades | Clubs'
 will print
 
 ```elm
-decodeSuit : Decoder Suit
+decodeSuit : Json.Decode.Decoder Suit
 decodeSuit =
     let
         decodeToType string =
@@ -130,12 +132,13 @@ decodeSuit =
                 "Clubs" -> Result.Ok Clubs
                 _ -> Result.Err "Pattern not found"
     in
-        customDecoder string decodeToType
+        customDecoder Json.Decode.string decodeToType
+
 encodeSuit : Suit -> Json.Encode.Value
 encodeSuit item =
     case item of
-        Hearts -> string "Hearts"
-        Diamonds -> string "Diamonds"
-        Spades -> string "Spades"
-        Clubs -> string "Clubs"
+        Hearts -> Json.Encode.string "Hearts"
+        Diamonds -> Json.Encode.string "Diamonds"
+        Spades -> Json.Encode.string "Spades"
+        Clubs -> Json.Encode.string "Clubs"
 ```
