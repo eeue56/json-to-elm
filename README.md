@@ -130,7 +130,7 @@ decodeSuit =
                 "Diamonds" -> Result.Ok Diamonds
                 "Spades" -> Result.Ok Spades
                 "Clubs" -> Result.Ok Clubs
-                _ -> Result.Err "Pattern not found"
+                _ -> Result.Err ("Not valid pattern for decoder to Suit. Pattern: " ++ (toString string))
     in
         customDecoder Json.Decode.string decodeToType
 

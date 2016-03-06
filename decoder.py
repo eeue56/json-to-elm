@@ -187,7 +187,7 @@ decode{type_name} =
         decodeToType string =
             case string of
                 {patterns}
-                _ -> Result.Err "Pattern not found"
+                _ -> Result.Err ("Not valid pattern for decoder to {type_name}. Pattern: " ++ (toString string))
     in
         customDecoder Json.Decode.string decodeToType
 """.format(type_name=type_name, patterns=formatted_constructors)
