@@ -4,7 +4,7 @@ import String
 import Set
 import Dict exposing (Dict)
 import Regex exposing (..)
-import Types
+import Types exposing (KnownTypes(..))
 import Json.Encode as Json
 
 knownDecoders =
@@ -16,14 +16,20 @@ knownDecoders =
     , "string"
     ]
 
+
+
 type alias TypeAlias =
     { name : String
-    , fields : Dict String String
+    , fields : Dict String Field
     , base : String
     }
 
 type alias Field =
-    (String, String)
+    { name : String
+    , typeName : KnownTypes
+    , base : String
+    , value : Json.Value
+    }
 
 capitalize : String -> String
 capitalize name =
@@ -33,20 +39,32 @@ capitalize name =
         x::xs ->
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
 
-fieldFormat : Field -> String
-fieldFormat (key, typeName) =
-    key ++ " : " ++ typeName
+fullyQualifiedName : Field -> String
+fullyQualifiedName field =
+    let
+        _ =
+            Debug.log "field" field
+    in
+        field.base ++ (capitalize field.name)
+            |> capitalize
+            |> Debug.log "fully "
 
+fieldFormat : Field -> String
+fieldFormat field =
+    case field.typeName of
+        ComplexType ->
+            field.name ++ " : " ++ (fullyQualifiedName field)
+        _ ->
+            field.name ++ " : " ++ (Types.knownTypesToString field.typeName)
 
 aliasFormat : TypeAlias -> String
 aliasFormat alias =
     let
         joinedFields =
-            Dict.toList alias.fields
+            Dict.values alias.fields
                 |> List.map fieldFormat
                 |> String.join "\n    , "
     in
-
         String.join ""
             [ "type alias "
             , alias.name
@@ -55,7 +73,7 @@ aliasFormat alias =
             , "\n    }"
             ]
 
-generateFields : Json.Value -> String -> List WithBase
+generateFields : Json.Value -> String -> List Field
 generateFields stuff base =
     Types.keys stuff
         |> List.map (\key ->
@@ -68,45 +86,47 @@ generateFields stuff base =
                 newBase =
                     base ++ (capitalize key)
                         |> capitalize
+
+                field =
+                    { base = String.trim base
+                    , name = String.trim key
+                    , typeName = name
+                    , value = value
+                    }
             in
-                if name == "Something" then
-                    generateFields value newBase ++ [(base, key, name, value)]
+                if name == ComplexType then
+                    generateFields value newBase ++ [ field ]
                 else
-                    [(base, key, name, value)]
+                    [ field ]
             )
         |> List.concat
 
-type alias WithBase =
-    (String, String, String, Json.Value)
 
-type alias FieldWithoutBase =
-    (String, String, Json.Value)
-
-gatherAliases : List WithBase -> List WithBase
+gatherAliases : List Field -> List Field
 gatherAliases items =
     items
-        |> List.filter (\(base, key, name, value) -> name == "Something")
+        |> List.filter (\item -> item.typeName == ComplexType)
 
-resolveConflicts : List WithBase -> List WithBase
+resolveConflicts : List Field -> List Field
 resolveConflicts items =
     let
 
-        keys : List String
-        keys =
-            List.map (\(b, key, n, v) -> key) items
+        names : List String
+        names =
+            List.map .name items
 
         count : String -> Int
         count incomingKey =
-            List.filter (\key -> key == incomingKey) keys
+            List.filter (\name -> name == incomingKey) names
                 |> List.length
                 |> Debug.log "count: "
 
-        update : WithBase -> List WithBase -> List WithBase
-        update (base, key, name, value) fine =
-            if count key > 1 then
-                (base, key, capitalize base ++ capitalize key, value) :: fine
+        update : Field -> List Field -> List Field
+        update field fine =
+            if count field.name > 1 then
+                { field | name = field.base ++ capitalize field.name } :: fine
             else
-                (base, key, capitalize key, value) :: fine
+                { field | name = field.name } :: fine
     in
         List.foldl update [] items
 
@@ -118,51 +138,51 @@ Looks like
 }
 
 -}
-createTypeAlias : List String -> Json.Value -> String -> String -> TypeAlias
-createTypeAlias knownNames stuff aliasName base =
+createTypeAlias : List String -> List Field -> Field -> TypeAlias
+createTypeAlias knownNames fields field =
     let
-        fields =
-            generateFields stuff base
-                |> List.filter (\(newBase, _, _, _) -> newBase == base)
-                |> List.map (\(base, key, name, _) ->
-                    if name == "Something" then
-                        (base,key, base ++ capitalize key)
-                    else
-                        (base, key, name)
-                    )
-                |> List.map (\(base, key, name) -> (key, name))
+        currentFields =
+            fields
+                |> List.filter (\item -> item.base == field.base)
+                |> List.map (\field -> (field.name, field))
                 |> Dict.fromList
     in
         { name =
-            if List.member aliasName knownNames then
-                Debug.log "non alias name" <| base ++ aliasName
+            if List.member field.name knownNames then
+                field.base ++ field.name
+                    |> capitalize
             else
-                Debug.log "alias name" aliasName
-        , fields = fields
-        , base = base
+                capitalize field.name
+        , fields = currentFields
+        , base = field.base
         }
 
 createTypeAliases : Json.Value -> String -> String -> List TypeAlias
 createTypeAliases stuff aliasName base =
     let
-        topLevel : WithBase
+        topLevel : Field
         topLevel =
-            (base, aliasName, aliasName, stuff)
+            { name = aliasName
+            , base = ""
+            , typeName = ComplexType
+            , value = stuff
+            }
+
 
         fields =
-            generateFields stuff aliasName
+            generateFields stuff (Debug.log "alais" aliasName)
                 |> (::) topLevel
                 |> Debug.log "fields"
 
-        fieldBuilder : WithBase -> Dict String (List WithBase) -> Dict String (List WithBase)
-        fieldBuilder (base, key, name, value) dict =
+        fieldBuilder : Field -> Dict String (List Field) -> Dict String (List Field)
+        fieldBuilder field dict =
             let
                 updater item =
                     case item of
                         Nothing ->
-                            Just [ (base, key, name, value) ]
+                            Just [ field ]
                         Just values ->
-                            Just ((base, key, name, value) :: values)
+                            Just (field :: values)
             in
                 Dict.update base updater dict
 
@@ -172,21 +192,21 @@ createTypeAliases stuff aliasName base =
                 |> List.foldl fieldBuilder Dict.empty
                 |> Debug.log "by base: "
 
-        creator (base, key, name, value) aliases =
+        creator field aliases =
             let
                 knownNames =
                     List.map .name aliases
                         |> Debug.log "known: "
 
                 alias =
-                    createTypeAlias knownNames value ((base ++ (capitalize key))) base
+                    createTypeAlias knownNames fields field
             in
                 alias :: aliases
         aliases =
            gatherAliases fields
                 |> Debug.log "before conflicts: "
-                |> resolveConflicts
-                |> (::) topLevel
+                --|> resolveConflicts
+                --|> (::) topLevel
                 |> Debug.log "after conflicts: "
                 |> List.foldl creator []
     in
@@ -224,6 +244,7 @@ getFields string =
                 Debug.log "no matches" []
             [x] ->
                 List.map (Maybe.withDefault "") x.submatches
+                    |> List.map String.trim
                     |> String.join ""
                     |> String.split ","
                     |> List.map String.trim
@@ -234,9 +255,12 @@ getFields string =
 getFieldNameAndType : String -> Field
 getFieldNameAndType string =
     case String.split ":" string of
-        [] -> ("", "")
-        [x] -> (x, "")
-        x::y::xs -> (String.trim x, String.trim y)
+        [] ->
+            { name = "", base = "", typeName = Unknown, value = Json.string ""}
+        [x] ->
+            { name = x, base = "", typeName = Unknown, value = Json.string ""}
+        x::y::xs ->
+            { name = String.trim <| String.toLower x , base = "", typeName = ResolvedType (Debug.log "y" y), value = Json.string ""}
 
 guessDecoder : String -> String
 guessDecoder typeName =
@@ -254,22 +278,24 @@ guessEncoder typeName =
 
 
 formatDecoderField : Field -> String
-formatDecoderField (key, value) =
-    "|: (" ++ key ++ " := " ++ ( guessDecoder <| String.toLower value) ++ ")"
+formatDecoderField field =
+    "|: (\"" ++ field.name ++ "\" := " ++ ( guessDecoder <| Types.knownTypesToString field.typeName ) ++ ")"
 
 
 formatEncoderField : Field -> String
-formatEncoderField (key, value) =
-    "(\"" ++ key ++ "\",  " ++ ( String.join " <| "<| String.split " " <| guessEncoder <| String.toLower value) ++ " record." ++ key ++  ")"
+formatEncoderField field =
+    "(\"" ++ field.name ++ "\",  " ++ ( String.join " <| "<| String.split " " <| guessEncoder <| Types.knownTypesToString field.typeName) ++ " record." ++ field.name ++  ")"
 
 createDecoder : String -> String
 createDecoder string =
     let
         withoutNewlines =
             replace All (regex "\\n") (\_ -> "") string
+
         typeName =
             getTypeAliasName withoutNewlines
                 |> Maybe.withDefault ""
+                |> capitalize
 
         fields =
             getFields withoutNewlines
@@ -285,7 +311,7 @@ createDecoder string =
             , typeName
             , "\ndecode"
             , typeName
-            , " =\n succeed "
+            , " =\n    succeed "
             , typeName
             , "\n        "
             , fields
@@ -299,6 +325,7 @@ createEncoder string =
         typeName =
             getTypeAliasName withoutNewlines
                 |> Maybe.withDefault ""
+                |> capitalize
 
         fields =
             getFields withoutNewlines
@@ -315,7 +342,7 @@ createEncoder string =
             , " -> Json.Encode.Value"
             , "\nencode"
             , typeName
-            , " record =\n     object\n        [ "
+            , " record =\n    object\n        [ "
             , fields
             , "\n        ]"
             ]
