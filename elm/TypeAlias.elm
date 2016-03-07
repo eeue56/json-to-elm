@@ -64,9 +64,13 @@ generateFields stuff base =
                     Types.unsafeGet key stuff
                 name =
                     Types.suggestType value
+                        |> Debug.log "name: "
+                newBase =
+                    base ++ (capitalize key)
+                        |> capitalize
             in
                 if name == "Something" then
-                    generateFields value (base ++ key) ++ [(base, key, name, value)]
+                    generateFields value newBase ++ [(base, key, name, value)]
                 else
                     [(base, key, name, value)]
             )
@@ -95,6 +99,7 @@ resolveConflicts items =
         count incomingKey =
             List.filter (\key -> key == incomingKey) keys
                 |> List.length
+                |> Debug.log "count: "
 
         update : WithBase -> List WithBase -> List WithBase
         update (base, key, name, value) fine =
@@ -113,15 +118,26 @@ Looks like
 }
 
 -}
-createTypeAlias : Json.Value -> String -> String -> TypeAlias
-createTypeAlias stuff aliasName base =
+createTypeAlias : List String -> Json.Value -> String -> String -> TypeAlias
+createTypeAlias knownNames stuff aliasName base =
     let
         fields =
             generateFields stuff base
-                |> List.map (\(_, key, name, _) -> (key, name))
+                |> List.filter (\(newBase, _, _, _) -> newBase == base)
+                |> List.map (\(base, key, name, _) ->
+                    if name == "Something" then
+                        (base,key, base ++ capitalize key)
+                    else
+                        (base, key, name)
+                    )
+                |> List.map (\(base, key, name) -> (key, name))
                 |> Dict.fromList
     in
-        { name = aliasName
+        { name =
+            if List.member aliasName knownNames then
+                Debug.log "non alias name" <| base ++ aliasName
+            else
+                Debug.log "alias name" aliasName
         , fields = fields
         , base = base
         }
@@ -129,16 +145,52 @@ createTypeAlias stuff aliasName base =
 createTypeAliases : Json.Value -> String -> String -> List TypeAlias
 createTypeAliases stuff aliasName base =
     let
+        topLevel : WithBase
+        topLevel =
+            (base, aliasName, aliasName, stuff)
+
         fields =
-            generateFields stuff base
-            |> Debug.log "fields"
+            generateFields stuff aliasName
+                |> (::) topLevel
+                |> Debug.log "fields"
+
+        fieldBuilder : WithBase -> Dict String (List WithBase) -> Dict String (List WithBase)
+        fieldBuilder (base, key, name, value) dict =
+            let
+                updater item =
+                    case item of
+                        Nothing ->
+                            Just [ (base, key, name, value) ]
+                        Just values ->
+                            Just ((base, key, name, value) :: values)
+            in
+                Dict.update base updater dict
+
+
+        fieldsByBase =
+            fields
+                |> List.foldl fieldBuilder Dict.empty
+                |> Debug.log "by base: "
+
+        creator (base, key, name, value) aliases =
+            let
+                knownNames =
+                    List.map .name aliases
+                        |> Debug.log "known: "
+
+                alias =
+                    createTypeAlias knownNames value ((base ++ (capitalize key))) base
+            in
+                alias :: aliases
         aliases =
-            gatherAliases fields
-                |> Debug.log "gathered"
+           gatherAliases fields
+                |> Debug.log "before conflicts: "
                 |> resolveConflicts
-                |> List.map (\(base, key, name, value) -> createTypeAlias value key base)
+                |> (::) topLevel
+                |> Debug.log "after conflicts: "
+                |> List.foldl creator []
     in
-        createTypeAlias stuff aliasName base :: aliases
+        aliases
 
 
 isAlreadyAName : String -> List TypeAlias -> Bool

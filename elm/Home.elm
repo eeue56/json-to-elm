@@ -54,7 +54,7 @@ css =
     ]
 
 
-aliases = TypeAlias.createTypeAlias (Types.toValue textStuff) "User"
+
 
 viewAlias : String -> Html
 viewAlias alias =
@@ -123,6 +123,7 @@ viewNameSelect address name =
         , input
             [ on "input" targetValue (Signal.message address << UpdateName)
             , style [ ("top", "0px") ]
+            , value name
             ]
             [ text <| name]
         ]
@@ -172,9 +173,9 @@ update action model =
 model =
     { input = """
     {"foo": {
-     "foo": "adkljasd"}
+     "bang": "adkljasd"}
     }
     """
-    , name = ""
+    , name = "Foo"
     , errors = []
     }
