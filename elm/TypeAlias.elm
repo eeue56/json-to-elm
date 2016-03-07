@@ -282,11 +282,11 @@ createDecoder string =
         String.join ""
             [ "decode"
             , typeName
-            , " : Decoder "
+            , " : Json.Decode.Decoder "
             , typeName
             , "\ndecode"
             , typeName
-            , " =\n    succeed "
+            , " =\n    Json.Decode.succeed "
             , typeName
             , "\n        "
             , fields
@@ -317,7 +317,7 @@ createEncoder string =
             , " -> Json.Encode.Value"
             , "\nencode"
             , typeName
-            , " record =\n    object\n        [ "
+            , " record =\n    Json.Encode.object\n        [ "
             , fields
             , "\n        ]"
             ]

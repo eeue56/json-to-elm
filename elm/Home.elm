@@ -137,7 +137,6 @@ view address model =
                 []
             else
                 TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
-                    |> Debug.log "name"
                     |> List.map TypeAlias.aliasFormat
     in
         div
@@ -145,7 +144,7 @@ view address model =
             [ viewNameSelect address model.name
             , viewInput address model.input
             , viewAll aliases
-            , Util.stylesheetLink "/homepage.css"
+            , Util.stylesheetLink "./homepage.css"
             ]
 
 type Action
@@ -171,11 +170,7 @@ update action model =
 
 
 model =
-    { input = """
-    {"foo": {
-     "bang": "adkljasd"}
-    }
-    """
-    , name = "Foo"
+    { input = ""
+    , name = ""
     , errors = []
     }
