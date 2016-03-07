@@ -11,7 +11,6 @@ app =
 main =
     app.html
 
-
 port tasks : Signal (Task.Task Effects.Never ())
 port tasks =
     app.tasks

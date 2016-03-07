@@ -54,7 +54,7 @@ css =
     ]
 
 
-aliases = TypeAlias.createTypeAlias (Types.toValue textStuff) "User"
+
 
 viewAlias : String -> Html
 viewAlias alias =
@@ -95,6 +95,12 @@ viewInput address alias =
         ]
         [ text <| alias ]
 
+viewErrors : Signal.Address Action -> List String -> Html
+viewErrors address errors =
+    ul
+        []
+        ((List.map (\error -> li [] [ text error ]) errors))
+
 
 aliasCss : Css.Snippet
 aliasCss =
@@ -117,6 +123,7 @@ viewNameSelect address name =
         , input
             [ on "input" targetValue (Signal.message address << UpdateName)
             , style [ ("top", "0px") ]
+            , value name
             ]
             [ text <| name]
         ]
@@ -129,7 +136,9 @@ view address model =
             if String.trim model.input == "" then
                 []
             else
-                TypeAlias.createTypeAlias (Types.toValue model.input) model.name
+                TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
+                    |> Debug.log "name"
+                    |> List.map TypeAlias.aliasFormat
     in
         div
             [ class [ Content ] ]
@@ -147,6 +156,7 @@ type Action
 type alias Model =
     { input : String
     , name : String
+    , errors : List String
     }
 
 update : Action -> Model -> (Model, Effects.Effects Action)
@@ -159,7 +169,13 @@ update action model =
         UpdateName name ->
             ( { model | name = name }, Effects.none)
 
+
 model =
-    { input = ""
-    , name = ""
+    { input = """
+    {"foo": {
+     "bang": "adkljasd"}
+    }
+    """
+    , name = "Foo"
+    , errors = []
     }
