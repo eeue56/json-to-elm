@@ -1,12 +1,11 @@
 module TypeAlias where
 
 import String
-import Set
-import Dict exposing (Dict)
 import Regex exposing (..)
 import Types exposing (KnownTypes(..))
 import Json.Encode as Json
 
+knownDecoders : List String
 knownDecoders =
     [ "maybe"
     , "list"
@@ -17,11 +16,11 @@ knownDecoders =
     ]
 
 
-
 type alias TypeAlias =
     { name : String
-    , fields : Dict String Field
+    , fields : List Field
     , base : String
+    , typeName : KnownTypes
     }
 
 type alias Field =
@@ -41,13 +40,7 @@ capitalize name =
 
 fullyQualifiedName : Field -> String
 fullyQualifiedName field =
-    let
-        _ =
-            Debug.log "field" field
-    in
-        field.base ++ (capitalize field.name)
-            |> capitalize
-            |> Debug.log "fully "
+    field.base ++ (capitalize field.name)
 
 fieldFormat : Field -> String
 fieldFormat field =
@@ -61,13 +54,12 @@ aliasFormat : TypeAlias -> String
 aliasFormat alias =
     let
         joinedFields =
-            Dict.values alias.fields
-                |> List.map fieldFormat
+            List.map fieldFormat alias.fields
                 |> String.join "\n    , "
     in
         String.join ""
             [ "type alias "
-            , alias.name
+            , capitalize <| Types.knownTypesToString alias.typeName
             , " =\n    { "
             , joinedFields
             , "\n    }"
@@ -82,7 +74,7 @@ generateFields stuff base =
                     Types.unsafeGet key stuff
                 name =
                     Types.suggestType value
-                        |> Debug.log "name: "
+
                 newBase =
                     base ++ (capitalize key)
                         |> capitalize
@@ -119,14 +111,13 @@ resolveConflicts items =
         count incomingKey =
             List.filter (\name -> name == incomingKey) names
                 |> List.length
-                |> Debug.log "count: "
 
         update : Field -> List Field -> List Field
         update field fine =
-            if count field.name > 1 then
-                { field | name = field.base ++ capitalize field.name } :: fine
+            if count field.name >= 1 then
+                { field | typeName = ResolvedType <| fullyQualifiedName field } :: fine
             else
-                { field | name = field.name } :: fine
+                { field | typeName = ResolvedType <| field.name } :: fine
     in
         List.foldl update [] items
 
@@ -143,18 +134,12 @@ createTypeAlias knownNames fields field =
     let
         currentFields =
             fields
-                |> List.filter (\item -> item.base == field.base)
-                |> List.map (\field -> (field.name, field))
-                |> Dict.fromList
+                |> List.filter (\item -> item.base == fullyQualifiedName field)
     in
-        { name =
-            if List.member field.name knownNames then
-                field.base ++ field.name
-                    |> capitalize
-            else
-                capitalize field.name
+        { name = field.name
         , fields = currentFields
         , base = field.base
+        , typeName = field.typeName
         }
 
 createTypeAliases : Json.Value -> String -> String -> List TypeAlias
@@ -170,44 +155,22 @@ createTypeAliases stuff aliasName base =
 
 
         fields =
-            generateFields stuff (Debug.log "alais" aliasName)
+            generateFields stuff aliasName
                 |> (::) topLevel
-                |> Debug.log "fields"
-
-        fieldBuilder : Field -> Dict String (List Field) -> Dict String (List Field)
-        fieldBuilder field dict =
-            let
-                updater item =
-                    case item of
-                        Nothing ->
-                            Just [ field ]
-                        Just values ->
-                            Just (field :: values)
-            in
-                Dict.update base updater dict
-
-
-        fieldsByBase =
-            fields
-                |> List.foldl fieldBuilder Dict.empty
-                |> Debug.log "by base: "
 
         creator field aliases =
             let
                 knownNames =
                     List.map .name aliases
-                        |> Debug.log "known: "
 
                 alias =
                     createTypeAlias knownNames fields field
             in
                 alias :: aliases
+
         aliases =
            gatherAliases fields
-                |> Debug.log "before conflicts: "
-                --|> resolveConflicts
-                --|> (::) topLevel
-                |> Debug.log "after conflicts: "
+                |> resolveConflicts
                 |> List.foldl creator []
     in
         aliases
@@ -256,23 +219,35 @@ getFieldNameAndType : String -> Field
 getFieldNameAndType string =
     case String.split ":" string of
         [] ->
-            { name = "", base = "", typeName = Unknown, value = Json.string ""}
+            { name = ""
+            , base = ""
+            , typeName = Unknown
+            , value = Json.string ""
+            }
         [x] ->
-            { name = x, base = "", typeName = Unknown, value = Json.string ""}
+            { name = x
+            , base = ""
+            , typeName = Unknown
+            , value = Json.string ""
+            }
         x::y::xs ->
-            { name = String.trim <| String.toLower x , base = "", typeName = ResolvedType (Debug.log "y" y), value = Json.string ""}
+            { name = String.trim <| String.toLower x
+            , base = ""
+            , typeName = ResolvedType y
+            , value = Json.string ""
+            }
 
 guessDecoder : String -> String
 guessDecoder typeName =
-    if List.member typeName knownDecoders then
-        typeName
+    if List.member (String.toLower typeName) knownDecoders then
+        "Json.Decode." ++ (String.toLower typeName)
     else
         "decode" ++ (capitalize typeName)
 
 guessEncoder : String -> String
 guessEncoder typeName =
-    if List.member typeName knownDecoders then
-        typeName
+    if List.member (String.toLower typeName) knownDecoders then
+        "Json.Encode." ++ (String.toLower typeName)
     else
         "encode" ++ (capitalize typeName)
 
