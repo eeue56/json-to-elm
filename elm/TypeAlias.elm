@@ -321,3 +321,112 @@ createEncoder string =
             , fields
             , "\n        ]"
             ]
+
+
+
+{-
+   var encodeBanana = function (record) {    return $Json$Encode.object(_U.list([{ctor: "_Tuple2",_0: "name",_1: $Json$Encode.string(record.name)}]));};
+   var Banana = function (a) {    return {name: a};};
+   var decodeBanana = A2($Json$Decode$Extra._op["|:"],$Json$Decode.succeed(Banana),A2($Json$Decode._op[":="],"name",$Json$Decode.string));
+
+-}
+
+runtimeObject : List Field -> String
+runtimeObject fields =
+    List.map .name fields
+        |> List.map (\name -> name ++ " : " ++ name)
+        |> String.join ",\n"
+
+runtimeCreateConstructor : TypeAlias -> String
+runtimeCreateConstructor alias =
+    String.join ""
+        [ "var "
+        , alias.name
+        , " = function ("
+        , String.join ", " (List.map .name alias.fields)
+        , ") {    return {"
+        , runtimeObject alias.fields
+        , "}; };"
+        ]
+
+prefixers =
+    [ "int"
+    , "float"
+    ]
+
+runtimeGuessDecoder : Field -> String
+runtimeGuessDecoder field =
+    let
+        typeName =
+            Types.knownTypesToString field.typeName
+        lower =
+            String.toLower typeName
+    in
+        if List.member lower knownDecoders then
+            if List.member lower prefixers then
+                "$Json$Decode.$" ++ lower
+            else
+                "$Json$Decode." ++ lower
+        else
+            "decode" ++ (capitalize typeName)
+
+runtimeGuessEncoder : Field -> String
+runtimeGuessEncoder field =
+    let
+        typeName =
+            Types.knownTypesToString field.typeName
+        lower =
+            String.toLower typeName
+    in
+        if List.member lower knownDecoders then
+            if List.member lower prefixers then
+                "$Json$Encode.$" ++ lower
+            else
+                "$Json$Encode." ++ lower
+        else
+            "decode" ++ (capitalize typeName)
+
+runtimeDecodeField : Field -> String
+runtimeDecodeField field =
+    String.join ""
+        [ "A2($Json$Decode._op[\":=\"],\""
+        , field.name
+        , "\","
+        , runtimeGuessDecoder field
+        , ")"
+        ]
+
+runtimeEncodeField : Field -> String
+runtimeEncodeField field =
+    String.join ""
+        [ "{ctor: \"_Tuple2\",_0: \""
+        , field.name
+        , "\",_1: "
+        , runtimeGuessEncoder field
+        , "(record."
+        , field.name
+        , ")}"
+        ]
+
+runtimeCreateDecoder : TypeAlias -> String
+runtimeCreateDecoder alias =
+    String.join ""
+        [ "var decode"
+        , alias.name
+        , " = A2($Json$Decode$Extra._op[\"|:\"],$Json$Decode.succeed("
+        , alias.name
+        , "),"
+        , String.join "," <| List.map runtimeDecodeField alias.fields
+        , ");"
+        ]
+--var encodeBanana = function (record) {    return $Json$Encode.object(_U.list([{ctor: "_Tuple2",_0: "name",_1: $Json$Encode.string(record.name)}]));};
+
+runtimeCreateEncoder : TypeAlias -> String
+runtimeCreateEncoder alias =
+    String.join ""
+        [ "var encode"
+        , alias.name
+        , " = function (record) {    return $Json$Encode.object(_U.list(["
+        , String.join "," <| List.map runtimeEncodeField alias.fields
+        , "]));};"
+        ]

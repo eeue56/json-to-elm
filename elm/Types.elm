@@ -1,8 +1,11 @@
 module Types where
 
 import Json.Encode as Json
+import Json.Decode
+import Json.Decode.Extra
 import String
 import Native.Types
+
 
 type KnownTypes
     = MaybeType KnownTypes
@@ -57,7 +60,7 @@ knownTypesToString known =
             String.trim name
 
         IntType ->
-            "IntType"
+            "Int"
 
         FloatType ->
             "Float"
@@ -97,3 +100,7 @@ get =
 unsafeGet : String -> Json.Value -> Json.Value
 unsafeGet =
     Native.Types.unsafeGet
+
+unsafeEval : String -> String -> String -> String -> String -> Result String Json.Value
+unsafeEval =
+    Native.Types.unsafeEval

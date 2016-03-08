@@ -4,9 +4,13 @@ var make = function make(elm) {
 
     if (elm.Native.Types.values) return elm.Native.Types.values;
 
-
     var List = Elm.Native.List.make(elm);
     var Maybe = Elm.Maybe.make(elm);
+    var Result = Elm.Result.make(elm);
+    var _U = Elm.Native.Utils.make(elm);
+    var $Json$Decode = Elm.Json.Decode.make(elm);
+    var $Json$Encode = Elm.Json.Encode.make(elm);
+    var $Json$Decode$Extra = Elm.Json.Decode.Extra.make(elm);
 
 
     var KNOWN_DECODERS = [
@@ -83,12 +87,29 @@ var make = function make(elm) {
         return obj[name];
     };
 
+    var unsafeEval = function(aliasName, constructorString, decoderString, encoderString, testData){
+        try {
+            var constructor = eval(constructorString);
+            var encoder = eval(encoderString);
+            var decoder = eval(decoderString);
+            var something = eval('decode' + aliasName + '(' + testData + ')');
+            console.log(something);
+            var somethingElse = eval('encode' + aliasName + '(' + JSON.stringify(something) + ')');
+            console.log(somethingElse);
+        } catch (e){
+            return Result.Err(e.message);
+        }
+
+        return Result.Ok(something);
+    };
+
     return elm.Native.Types.values = {
         'makeGuessAtType' : makeGuessAtType,
         'toValue': toValue,
         'keys': keys,
         'get': F2(get),
-        'unsafeGet': F2(unsafeGet)
+        'unsafeGet': F2(unsafeGet),
+        'unsafeEval': F5(unsafeEval)
     };
 };
 

@@ -1,6 +1,6 @@
 module Home where
 
-import TypeAlias
+import TypeAlias exposing (TypeAlias)
 import Types
 
 import String
@@ -74,11 +74,19 @@ viewOutput alias =
         ]
         [ text <| TypeAlias.createDecoder alias]
 
-viewAll : List String -> Html
-viewAll aliases =
+viewAll : String -> List TypeAlias -> Html
+viewAll incoming aliases =
     let
+        formattedAliases =
+            List.map TypeAlias.aliasFormat aliases
+
         output =
-            String.join "\n\n" (aliases ++ (List.map TypeAlias.createDecoder aliases) ++ (List.map TypeAlias.createEncoder aliases))
+            [ formattedAliases
+            , List.map TypeAlias.createDecoder formattedAliases
+            , List.map TypeAlias.createEncoder formattedAliases
+            ]
+                |> List.concat
+                |> String.join "\n\n"
     in
         textarea
             [ value <| output
@@ -115,6 +123,34 @@ aliasCss =
             ]
         ]
 
+
+viewStatus : String -> List TypeAlias -> Html
+viewStatus incoming aliases =
+    let
+        successes =
+            aliases
+                |> List.map (\alias ->
+                    (alias,
+                        Types.unsafeEval
+                            alias.name
+                            (TypeAlias.runtimeCreateConstructor alias)
+                            (TypeAlias.runtimeCreateDecoder alias)
+                            (TypeAlias.runtimeCreateEncoder alias)
+                            incoming
+                    )
+                )
+    in
+        successes
+            |> List.map (\(alias, evaled) ->
+                div
+                    []
+                    [ text <| "Alias " ++ alias.name ++ " parsed:"
+                    , text <| toString evaled
+                    ]
+            )
+            |> div []
+
+
 viewNameSelect : Signal.Address Action -> String -> Html
 viewNameSelect address name =
     div
@@ -137,14 +173,15 @@ view address model =
                 []
             else
                 TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
-                    |> List.map TypeAlias.aliasFormat
+
     in
         div
             [ class [ Content ] ]
             [ viewNameSelect address model.name
             , viewInput address model.input
-            , viewAll aliases
-            , Util.stylesheetLink "./homepage.css"
+            , viewAll model.input aliases
+            , viewStatus model.input aliases
+            , Util.stylesheetLink "/homepage.css"
             ]
 
 type Action
@@ -170,7 +207,9 @@ update action model =
 
 
 model =
-    { input = ""
-    , name = ""
+    { input = """{
+  "name" :"noah"
+}"""
+    , name = "User"
     , errors = []
     }
