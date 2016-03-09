@@ -21,6 +21,7 @@ type alias TypeAlias =
     , fields : List Field
     , base : String
     , typeName : KnownTypes
+    , value : Json.Value
     }
 
 type alias Field =
@@ -140,6 +141,7 @@ createTypeAlias knownNames fields field =
         , fields = currentFields
         , base = field.base
         , typeName = field.typeName
+        , value = field.value
         }
 
 createTypeAliases : Json.Value -> String -> String -> List TypeAlias
@@ -254,12 +256,32 @@ guessEncoder typeName =
 
 formatDecoderField : Field -> String
 formatDecoderField field =
-    "|: (\"" ++ field.name ++ "\" := " ++ ( guessDecoder <| Types.knownTypesToString field.typeName ) ++ ")"
+    let
+        decoder =
+            Types.knownTypesToString field.typeName
+                |> String.split " "
+                |> List.map guessDecoder
+                |> String.join " "
+    in
+        "|: (\"" ++ field.name ++ "\" := " ++ decoder ++ ")"
 
 
 formatEncoderField : Field -> String
 formatEncoderField field =
-    "(\"" ++ field.name ++ "\",  " ++ ( String.join " <| "<| String.split " " <| guessEncoder <| Types.knownTypesToString field.typeName) ++ " record." ++ field.name ++  ")"
+    let
+        encoder =
+            Types.knownTypesToString field.typeName
+                |> String.split " "
+                |> List.map guessEncoder
+                |> List.map (\s ->
+                    if s == "Json.Encode.list" then
+                        s ++ " <| List.map "
+                    else
+                        s ++ " <| "
+                )
+                |> String.join ""
+    in
+        "(\"" ++ field.name ++ "\",  " ++ encoder ++ "record." ++ field.name ++  ")"
 
 createDecoder : String -> String
 createDecoder string =
@@ -339,15 +361,32 @@ runtimeObject fields =
 
 runtimeCreateConstructor : TypeAlias -> String
 runtimeCreateConstructor alias =
-    String.join ""
-        [ "var "
-        , alias.name
-        , " = function ("
-        , String.join ", " (List.map .name alias.fields)
-        , ") {    return {"
-        , runtimeObject alias.fields
-        , "}; };"
-        ]
+    let
+        functionWrapper =
+            if List.length alias.fields < 2 then
+                ""
+            else
+                "F" ++ (toString <| List.length alias.fields) ++ "("
+
+        functionWrapperEnd =
+            if functionWrapper == "" then
+                ""
+            else
+                ")"
+    in
+        String.join ""
+            [ "var "
+            , alias.name
+            , " = "
+            , functionWrapper
+            , "function ("
+            , String.join ", " (List.map .name alias.fields)
+            , ") {    return {"
+            , runtimeObject alias.fields
+            , "}; }"
+            , functionWrapperEnd
+            , ";"
+            ]
 
 prefixers =
     [ "int"
@@ -357,18 +396,32 @@ prefixers =
 runtimeGuessDecoder : Field -> String
 runtimeGuessDecoder field =
     let
-        typeName =
+        typeNames =
             Types.knownTypesToString field.typeName
-        lower =
-            String.toLower typeName
+                |> String.split " "
+
+        closer =
+            (List.repeat ((List.length typeNames) - 1) ")")
+                |> String.join ""
+
+        guessSingleDecoder typeName =
+            let
+                lower =
+                    String.toLower typeName
+            in
+                if List.member lower knownDecoders then
+                    if List.member lower prefixers then
+                        "$Json$Decode.$" ++ lower
+                    else
+                        "$Json$Decode." ++ lower
+                else
+                    "decode" ++ (capitalize typeName)
     in
-        if List.member lower knownDecoders then
-            if List.member lower prefixers then
-                "$Json$Decode.$" ++ lower
-            else
-                "$Json$Decode." ++ lower
-        else
-            "decode" ++ (capitalize typeName)
+        typeNames
+            |> List.map guessSingleDecoder
+            |> String.join "("
+            |> (\s -> s ++ closer)
+
 
 runtimeGuessEncoder : Field -> String
 runtimeGuessEncoder field =
@@ -410,15 +463,26 @@ runtimeEncodeField field =
 
 runtimeCreateDecoder : TypeAlias -> String
 runtimeCreateDecoder alias =
-    String.join ""
-        [ "var decode"
-        , alias.name
-        , " = A2($Json$Decode$Extra._op[\"|:\"],$Json$Decode.succeed("
-        , alias.name
-        , "),"
-        , String.join "," <| List.map runtimeDecodeField alias.fields
-        , ");"
-        ]
+    let
+        preamble =
+            List.repeat (List.length alias.fields) "A2($Json$Decode$Extra._op[\"|:\"]"
+                |> String.join ","
+
+        ender =
+            List.repeat (List.length alias.fields) ")"
+                |> String.join ""
+    in
+        String.join ""
+            [ "var decode"
+            , alias.name
+            , " = "
+            , preamble
+            , ",$Json$Decode.succeed("
+            , alias.name
+            , "),"
+            , String.join ")," <| List.map runtimeDecodeField alias.fields
+            , ");"
+            ]
 --var encodeBanana = function (record) {    return $Json$Encode.object(_U.list([{ctor: "_Tuple2",_0: "name",_1: $Json$Encode.string(record.name)}]));};
 
 runtimeCreateEncoder : TypeAlias -> String

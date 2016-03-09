@@ -136,7 +136,7 @@ viewStatus incoming aliases =
                             (TypeAlias.runtimeCreateConstructor alias)
                             (TypeAlias.runtimeCreateDecoder alias)
                             (TypeAlias.runtimeCreateEncoder alias)
-                            incoming
+                            alias.value
                     )
                 )
     in
@@ -208,7 +208,8 @@ update action model =
 
 model =
     { input = """{
-  "name" :"noah"
+  "name" :"noah",
+  "age" : [5]
 }"""
     , name = "User"
     , errors = []

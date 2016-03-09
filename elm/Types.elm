@@ -1,11 +1,29 @@
 module Types where
 
 import Json.Encode as Json
-import Json.Decode
-import Json.Decode.Extra
+import Json.Decode exposing ((:=))
+import Json.Decode.Extra exposing ((|:))
 import String
 import Native.Types
 
+
+type alias User =
+    { name : String
+    , age : List Int
+    }
+
+decodeUser : Json.Decode.Decoder User
+decodeUser =
+    Json.Decode.succeed User
+        |: ("name" := Json.Decode.string)
+        |: ("age" := Json.Decode.list Json.Decode.int)
+
+encodeUser : User -> Json.Value
+encodeUser record =
+    Json.object
+        [ ("name",  Json.string <| record.name)
+        , ("age",  Json.list <| List.map Json.int <| record.age)
+        ]
 
 type KnownTypes
     = MaybeType KnownTypes
@@ -101,6 +119,9 @@ unsafeGet : String -> Json.Value -> Json.Value
 unsafeGet =
     Native.Types.unsafeGet
 
-unsafeEval : String -> String -> String -> String -> String -> Result String Json.Value
-unsafeEval =
-    Native.Types.unsafeEval
+unsafeEval : String -> String -> String -> String -> Json.Value -> Result String Json.Value
+unsafeEval aliasName constructorString decoderString encoderString testData =
+    Native.Types.unsafeEval aliasName constructorString decoderString encoderString testData
+
+
+

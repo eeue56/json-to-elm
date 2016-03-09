@@ -89,10 +89,13 @@ var make = function make(elm) {
 
     var unsafeEval = function(aliasName, constructorString, decoderString, encoderString, testData){
         try {
+            console.log(constructorString);
+            console.log(encoderString);
+            console.log(testData);
             var constructor = eval(constructorString);
             var encoder = eval(encoderString);
             var decoder = eval(decoderString);
-            var something = eval('decode' + aliasName + '(' + testData + ')');
+            var something = eval('decode' + aliasName + '(' + JSON.stringify(testData) + ')');
             console.log(something);
             var somethingElse = eval('encode' + aliasName + '(' + JSON.stringify(something) + ')');
             console.log(somethingElse);
