@@ -13,13 +13,12 @@ import Effects
 import Task
 import Css exposing (..)
 import Css.Elements as Css
-import Css.Namespace exposing (namespace)
 import Html.CssHelpers
 import ColorScheme exposing (..)
 
 cssNamespace = "homepage"
 
-{ class, classList, id } = Html.CssHelpers.namespace cssNamespace
+{ class, classList, id, rules } = Html.CssHelpers.namespace cssNamespace
 
 textStuff =
     """
@@ -38,7 +37,7 @@ type CssClasses =
   Content | Input | Output | Alias
 
 css =
-  (stylesheet << namespace cssNamespace)
+  (stylesheet << rules)
     [ Css.body
         [ backgroundColor accent1 ]
     , (.) Content
@@ -168,6 +167,9 @@ viewNameSelect address name =
 view : Signal.Address Action -> Model -> Html
 view address model =
     let
+        _ =
+            Debug.log "hello" model
+
         aliases =
             if String.trim model.input == "" then
                 []
@@ -189,10 +191,16 @@ type Action
     | UpdateName String
     | Noop
 
+type InputType
+    = TypeAliasType
+    | UnionType
+    | JsonBlob
+
 type alias Model =
     { input : String
     , name : String
     , errors : List String
+    , inputType : InputType
     }
 
 update : Action -> Model -> (Model, Effects.Effects Action)
@@ -201,7 +209,18 @@ update action model =
         Noop ->
             (model, Effects.none)
         UpdateInput input ->
-            ( { model | input = input }, Effects.none)
+            (
+                { model
+                    | input = input
+                    , inputType =
+                        if TypeAlias.isUnionType input then
+                            UnionType
+                        else if TypeAlias.isTypeAlias input then
+                            TypeAliasType
+                        else
+                            JsonBlob
+                }
+                , Effects.none)
         UpdateName name ->
             ( { model | name = name }, Effects.none)
 
@@ -213,4 +232,5 @@ model =
 }"""
     , name = "User"
     , errors = []
+    , inputType = JsonBlob
     }

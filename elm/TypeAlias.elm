@@ -494,3 +494,19 @@ runtimeCreateEncoder alias =
         , String.join "," <| List.map runtimeEncodeField alias.fields
         , "]));};"
         ]
+
+isUnionType : String -> Bool
+isUnionType input =
+    if String.startsWith "type" input then
+        String.startsWith "type alias" input
+            |> not
+    else
+        False
+
+isTypeAlias : String -> Bool
+isTypeAlias input =
+    String.startsWith "type alias" input
+
+isJsonBlob : String -> Bool
+isJsonBlob input =
+    String.startsWith "{" input && String.endsWith "}" input
