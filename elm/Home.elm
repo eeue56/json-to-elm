@@ -1,6 +1,7 @@
 module Home where
 
 import TypeAlias exposing (TypeAlias)
+import UnionType
 import Types
 
 import String
@@ -16,21 +17,8 @@ import Css.Elements as Css
 import Html.CssHelpers
 import ColorScheme exposing (..)
 
-cssNamespace = "homepage"
 
-{ class, classList, id, rules } = Html.CssHelpers.namespace cssNamespace
-
-textStuff =
-    """
-{
-    "name": "Dave",
-    "age" : 15,
-    "location" : {
-        "name" : "Sweden",
-        "days" : 25.5
-    }
-}
-    """
+{ class, classList, id, rules } = Html.CssHelpers.namespace "homepage"
 
 
 type CssClasses =
@@ -73,8 +61,8 @@ viewOutput alias =
         ]
         [ text <| TypeAlias.createDecoder alias]
 
-viewAll : String -> List TypeAlias -> Html
-viewAll incoming aliases =
+viewAllAliases : String -> List TypeAlias -> Html
+viewAllAliases incoming aliases =
     let
         formattedAliases =
             List.map TypeAlias.aliasFormat aliases
@@ -86,6 +74,20 @@ viewAll incoming aliases =
             ]
                 |> List.concat
                 |> String.join "\n\n"
+    in
+        textarea
+            [ value <| output
+            , class [ Output ]
+            ]
+            []
+
+viewAllUnions : String -> Html
+viewAllUnions union =
+    let
+        output =
+            UnionType.createUnionType union
+                |> UnionType.createDecoder
+
     in
         textarea
             [ value <| output
@@ -167,8 +169,6 @@ viewNameSelect address name =
 view : Signal.Address Action -> Model -> Html
 view address model =
     let
-        _ =
-            Debug.log "hello" model
 
         aliases =
             if String.trim model.input == "" then
@@ -176,15 +176,30 @@ view address model =
             else
                 TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
 
+        mainBody =
+            case model.inputType of
+                JsonBlob ->
+                    [ viewAllAliases model.input aliases
+                    , viewStatus model.input aliases
+                    ]
+                TypeAliasType ->
+                    []
+                UnionType ->
+                    [ viewAllUnions model.input
+                    ]
+
     in
         div
             [ class [ Content ] ]
-            [ viewNameSelect address model.name
+            ([ Util.stylesheetLink "/homepage.css"
+            , case model.inputType of
+                JsonBlob ->
+                    viewNameSelect address model.name
+                _ ->
+                    span [] []
             , viewInput address model.input
-            , viewAll model.input aliases
-            , viewStatus model.input aliases
-            , Util.stylesheetLink "/homepage.css"
             ]
+            ++ mainBody)
 
 type Action
     = UpdateInput String
