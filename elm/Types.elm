@@ -6,25 +6,6 @@ import Json.Decode.Extra exposing ((|:))
 import String
 import Native.Types
 
-
-type alias User =
-    { name : String
-    , age : List Int
-    }
-
-decodeUser : Json.Decode.Decoder User
-decodeUser =
-    Json.Decode.succeed User
-        |: ("name" := Json.Decode.string)
-        |: ("age" := Json.Decode.list Json.Decode.int)
-
-encodeUser : User -> Json.Value
-encodeUser record =
-    Json.object
-        [ ("name",  Json.string <| record.name)
-        , ("age",  Json.list <| List.map Json.int <| record.age)
-        ]
-
 type KnownTypes
     = MaybeType KnownTypes
     | ListType KnownTypes
@@ -55,7 +36,7 @@ typeToKnownTypes string =
                 [] ->
                     Unknown
                 [x] ->
-                    Unknown
+                    typeToKnownTypes string
                 x::xs ->
                     case x of
                         "Maybe" ->

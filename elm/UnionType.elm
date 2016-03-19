@@ -54,8 +54,56 @@ formatConstructorDecoder field =
         ]
 
 
+toStringName : UnionType -> String
+toStringName union =
+    "toString" ++ union.name
+
+fromStringName : UnionType -> String
+fromStringName union =
+    "fromString" ++ union.name
+
+createTypeFromString : UnionType -> String
+createTypeFromString union =
+    let
+        formattedConstructors =
+            Dict.keys union.fields
+                |> List.map formatConstructorDecoder
+                |> String.join "\n        "
+    in
+        String.join ""
+            [ fromStringName union
+            , " : "
+            , union.name
+            , " -> Result String String"
+            , "\n"
+            , fromStringName union
+            , " string = "
+            , "\n    "
+            , "case string of\n        "
+            , formattedConstructors
+            , "\n        _ -> Result.Err (\"Not valid pattern for decoder to "
+            , union.name
+            , ". Pattern: \" ++ (toString string))"
+            ]
+
+
+
 createDecoder : UnionType -> String
 createDecoder union =
+    String.join ""
+        [ "decode"
+        , union.name
+        , " : Json.Decode.Decoder "
+        , union.name
+        , "\ndecode"
+        , union.name
+        , " =\n"
+        , "    Json.Decode.string `Json.Decode.andThen` "
+        , fromStringName union
+        ]
+
+createEncoder : UnionType -> String
+createEncoder union =
     let
         formattedConstructors =
             Dict.keys union.fields
@@ -64,17 +112,12 @@ createDecoder union =
 
     in
         String.join ""
-            [ "decode"
+            [ "encode"
             , union.name
-            , " : Json.Decode.Decoder "
+            , " : "
             , union.name
-            , "\ndecode"
+            , " -> Json.Value"
+            , "\nencode"
             , union.name
-            , " =\n    let\n       decodeToType string =\n"
-            , "            case string of\n                "
-            , formattedConstructors
-            , "\n_ -> Result.Err (\"Not valid pattern for decoder to "
-            , union.name
-            , ". Pattern: \" ++ (toString string))\n    in"
-            , "\n        customDecoder Json.Decode.string decodeToType"
+            , " =\n toString >> Json.Encode.string"
             ]

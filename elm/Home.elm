@@ -14,18 +14,21 @@ import Effects
 import Task
 import Css exposing (..)
 import Css.Elements as Css
+import Css.Namespace exposing (namespace)
 import Html.CssHelpers
 import ColorScheme exposing (..)
 
 
-{ class, classList, id, rules } = Html.CssHelpers.namespace "homepage"
+cssNamespace = "homepage"
+
+{ class, classList, id } = Html.CssHelpers.withNamespace cssNamespace
 
 
 type CssClasses =
   Content | Input | Output | Alias
 
 css =
-  (stylesheet << rules)
+  (stylesheet << namespace cssNamespace)
     [ Css.body
         [ backgroundColor accent1 ]
     , (.) Content
@@ -81,12 +84,33 @@ viewAllAliases incoming aliases =
             ]
             []
 
+viewTypeAliasStuff : String -> Html
+viewTypeAliasStuff incoming =
+    let
+        output =
+            [ TypeAlias.createDecoder incoming
+            , TypeAlias.createEncoder incoming
+            ]
+                |> String.join "\n\n"
+    in
+        textarea
+            [ value <| output
+            , class [ Output ]
+            ]
+            []
+
 viewAllUnions : String -> Html
 viewAllUnions union =
     let
-        output =
+        type' =
             UnionType.createUnionType union
-                |> UnionType.createDecoder
+
+        output =
+            [ UnionType.createTypeFromString type'
+            , UnionType.createDecoder type'
+            , UnionType.createEncoder type'
+            ]
+                |> String.join "\n\n"
 
     in
         textarea
@@ -183,7 +207,8 @@ view address model =
                     , viewStatus model.input aliases
                     ]
                 TypeAliasType ->
-                    []
+                    [ viewTypeAliasStuff model.input
+                    ]
                 UnionType ->
                     [ viewAllUnions model.input
                     ]
