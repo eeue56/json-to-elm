@@ -60,20 +60,20 @@ def field_name_and_type(string):
 
     return (splitted[0].strip(), splitted[1].strip())
 
-def make_guess_at_decoder(string):
+def make_guess_at_codec(string):
     return string.lower()
 
-def prefix_decoder(prefix, value):
+def prefix_codec(prefix, value, default_module=JSON_DECODE):
     parts = value.split()
 
     return ' '.join(
-        JSON_DECODE + value
+        default_module + value
             if value in KNOWN_DECODERS
             else prefix + value.capitalize()
             for value in parts
     )
 
-def suffix_decoder(suffix, value):
+def suffix_codec(suffix, value):
     parts = value.split()
 
     return ' '.join(
@@ -94,13 +94,13 @@ def create_decoder(string, has_snakecase=False, prefix=None, suffix=None):
                 for name, value in fields
         ]
 
-    fields = [(name, make_guess_at_decoder(type)) for name, type in fields]
+    fields = [(name, make_guess_at_codec(type)) for name, type in fields]
 
     if prefix is not None:
-        fields = [ (name, prefix_decoder(prefix, value)) for name, value in fields ]
+        fields = [ (name, prefix_codec(prefix, value)) for name, value in fields ]
 
     if suffix is not None:
-        fields = [ (name, suffix_decoder(suffix, value)) for name, value in fields ]
+        fields = [ (name, suffix_codec(suffix, value)) for name, value in fields ]
 
 
     formattedFields ='\n        '.join(
@@ -135,13 +135,13 @@ def create_encoder(string, has_snakecase=False, prefix=None, suffix=None):
                 for name, value in fields
         ]
 
-    fields = [(name, make_guess_at_decoder(type)) for name, type in fields]
+    fields = [(name, make_guess_at_codec(type)) for name, type in fields]
 
     if prefix is not None:
-        fields = [ (name, prefix_decoder(prefix, value)) for name, value in fields ]
+        fields = [ (name, prefix_codec(prefix, value, JSON_ENCODE)) for name, value in fields ]
 
     if suffix is not None:
-        fields = [ (name, suffix_decoder(suffix, value)) for name, value in fields ]
+        fields = [ (name, suffix_codec(suffix, value)) for name, value in fields ]
 
     formatted_fields ='\n        , '.join(
         '("{name}", {type} record.{original_name})'
