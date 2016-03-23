@@ -132,7 +132,7 @@ decodeSuit =
                 "Clubs" -> Result.Ok Clubs
                 _ -> Result.Err ("Not valid pattern for decoder to Suit. Pattern: " ++ (toString string))
     in
-        customDecoder Json.Decode.string decodeToType
+        Json.Decode.customDecoder Json.Decode.string decodeToType
 
 encodeSuit : Suit -> Json.Encode.Value
 encodeSuit item =

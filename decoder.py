@@ -189,7 +189,7 @@ decode{type_name} =
                 {patterns}
                 _ -> Result.Err ("Not valid pattern for decoder to {type_name}. Pattern: " ++ (toString string))
     in
-        customDecoder Json.Decode.string decodeToType
+        Json.Decode.customDecoder Json.Decode.string decodeToType
 """.format(type_name=type_name, patterns=formatted_constructors)
 
     return output.strip()
