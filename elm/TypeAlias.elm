@@ -275,7 +275,7 @@ formatPipelineDecoderField field =
                 |> List.map guessDecoder
                 |> String.join " "
     in
-        "|> \"" ++ field.name ++ "\" (" ++ decoder ++ ")"
+        "|> required \"" ++ field.name ++ "\" (" ++ decoder ++ ")"
 
 
 formatEncoderField : Field -> String
@@ -553,3 +553,83 @@ isTypeAlias input =
 isJsonBlob : String -> Bool
 isJsonBlob input =
     String.startsWith "{" input && String.endsWith "}" input
+
+isDecoder : String -> Bool
+isDecoder input =
+    String.startsWith "decode" input
+
+
+typeFromDecoder : String -> KnownTypes
+typeFromDecoder input =
+    case String.lines (Debug.log "in" input) of
+        [] ->
+            Unknown
+        x::xs ->
+            if String.contains "Json.Decode.Decoder" x then
+                case String.split "Json.Decode.Decoder" x of
+                    a::name::_ ->
+                        ResolvedType (String.trim name)
+                    _ ->
+                        Unknown
+            else if List.length xs == 0 then
+                Unknown
+            else
+                typeFromDecoder (String.join "\n" xs)
+
+
+guessTypeFromDecoder : String -> KnownTypes
+guessTypeFromDecoder decoder =
+    String.words decoder
+        |> List.map String.trim
+        |> List.map (\x ->
+            if String.startsWith "Json.Decode." x then
+                String.dropLeft 12 x
+                    |> capitalize
+            else
+                capitalize x
+            )
+        |> String.join " "
+        |> Types.typeToKnownTypes
+
+
+fieldsFromDecoder : String -> List Field
+fieldsFromDecoder input =
+    String.lines input
+        |> List.map String.trim
+        |> List.filter (String.startsWith "|:")
+        |> List.map (String.dropLeft 4)
+        |> List.map (String.dropRight 1)
+        |> List.filterMap (\line ->
+            case String.split ":=" line of
+                name::decoder::_ ->
+                    Just
+                        { name =
+                            String.filter ((/=) '\"') name
+                        , typeName =
+                            guessTypeFromDecoder decoder
+                        , base =
+                            ""
+                        , value =
+                            Json.string line
+                        }
+                _ -> Nothing
+            )
+
+typeAliasFromDecoder : String -> TypeAlias
+typeAliasFromDecoder input =
+    let
+        pieces =
+            typeFromDecoder (String.trim input)
+    in
+        { name =
+            Types.knownTypesToString pieces
+
+        , fields =
+            fieldsFromDecoder (String.trim input)
+        , base =
+            ""
+        , typeName =
+            pieces
+        , value =
+            Json.string input
+        }

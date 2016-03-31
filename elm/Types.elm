@@ -36,7 +36,7 @@ typeToKnownTypes string =
                 [] ->
                     Unknown
                 [x] ->
-                    typeToKnownTypes string
+                    typeToKnownTypes "Something"
                 x::xs ->
                     case x of
                         "Maybe" ->

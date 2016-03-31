@@ -72,10 +72,33 @@ viewAllAliases incoming aliases =
 
         output =
             [ formattedAliases
-            , List.map TypeAlias.createPipelineDecoder formattedAliases
+            , List.map TypeAlias.createDecoder formattedAliases
             , List.map TypeAlias.createEncoder formattedAliases
             ]
                 |> List.concat
+                |> String.join "\n\n"
+    in
+        textarea
+            [ value <| output
+            , class [ Output ]
+            ]
+            []
+
+viewAllDecoder : String -> Html
+viewAllDecoder incoming =
+    let
+
+        alias =
+            TypeAlias.typeAliasFromDecoder incoming
+
+        formattedAlias =
+            TypeAlias.aliasFormat alias
+
+        output =
+            [ formattedAlias
+            , TypeAlias.createPipelineDecoder formattedAlias
+            , TypeAlias.createEncoder formattedAlias
+            ]
                 |> String.join "\n\n"
     in
         textarea
@@ -212,6 +235,9 @@ view address model =
                 UnionType ->
                     [ viewAllUnions model.input
                     ]
+                DecoderString ->
+                    [ viewAllDecoder model.input
+                    ]
 
     in
         div
@@ -235,6 +261,7 @@ type InputType
     = TypeAliasType
     | UnionType
     | JsonBlob
+    | DecoderString
 
 type alias Model =
     { input : String
@@ -257,6 +284,8 @@ update action model =
                             UnionType
                         else if TypeAlias.isTypeAlias input then
                             TypeAliasType
+                        else if TypeAlias.isDecoder input then
+                            DecoderString
                         else
                             JsonBlob
                 }
