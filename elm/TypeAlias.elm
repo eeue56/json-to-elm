@@ -266,6 +266,18 @@ formatDecoderField field =
         "|: (\"" ++ field.name ++ "\" := " ++ decoder ++ ")"
 
 
+formatPipelineDecoderField : Field -> String
+formatPipelineDecoderField field =
+    let
+        decoder =
+            Types.knownTypesToString field.typeName
+                |> String.split " "
+                |> List.map guessDecoder
+                |> String.join " "
+    in
+        "|> \"" ++ field.name ++ "\" (" ++ decoder ++ ")"
+
+
 formatEncoderField : Field -> String
 formatEncoderField field =
     let
@@ -309,6 +321,37 @@ createDecoder string =
             , "\ndecode"
             , typeName
             , " =\n    Json.Decode.succeed "
+            , typeName
+            , "\n        "
+            , fields
+            ]
+
+createPipelineDecoder : String -> String
+createPipelineDecoder string =
+    let
+        withoutNewlines =
+            replace All (regex "\\n") (\_ -> "") string
+
+        typeName =
+            getTypeAliasName withoutNewlines
+                |> Maybe.withDefault ""
+                |> capitalize
+
+        fields =
+            getFields withoutNewlines
+                |> List.map getFieldNameAndType
+                |> List.map formatPipelineDecoderField
+                |> String.join "\n        "
+
+    in
+        String.join ""
+            [ "decode"
+            , typeName
+            , " : Json.Decode.Decoder "
+            , typeName
+            , "\ndecode"
+            , typeName
+            , " =\n    Json.Decode.Pipeline.decode "
             , typeName
             , "\n        "
             , fields

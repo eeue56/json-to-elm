@@ -72,7 +72,7 @@ viewAllAliases incoming aliases =
 
         output =
             [ formattedAliases
-            , List.map TypeAlias.createDecoder formattedAliases
+            , List.map TypeAlias.createPipelineDecoder formattedAliases
             , List.map TypeAlias.createEncoder formattedAliases
             ]
                 |> List.concat
