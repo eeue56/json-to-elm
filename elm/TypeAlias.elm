@@ -39,6 +39,14 @@ capitalize name =
         x::xs ->
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
 
+camelCase : String -> String
+camelCase name =
+    case String.toList name of
+        [] ->
+            ""
+        x::xs ->
+            (String.toLower (String.fromChar x)) ++ (String.fromList xs)
+
 fullyQualifiedName : Field -> String
 fullyQualifiedName field =
     field.base ++ (capitalize field.name)
@@ -47,9 +55,9 @@ fieldFormat : Field -> String
 fieldFormat field =
     case field.typeName of
         ComplexType ->
-            field.name ++ " : " ++ (fullyQualifiedName field)
+            (camelCase field.name) ++ " : " ++ (fullyQualifiedName field)
         _ ->
-            field.name ++ " : " ++ (Types.knownTypesToString field.typeName)
+            (camelCase field.name) ++ " : " ++ (Types.knownTypesToString field.typeName)
 
 aliasFormat : TypeAlias -> String
 aliasFormat alias =
@@ -233,7 +241,7 @@ getFieldNameAndType string =
             , value = Json.string ""
             }
         x::y::xs ->
-            { name = String.trim <| String.toLower x
+            { name = String.trim x
             , base = ""
             , typeName = ResolvedType y
             , value = Json.string ""
@@ -257,6 +265,9 @@ guessEncoder typeName =
 formatDecoderField : Field -> String
 formatDecoderField field =
     let
+        _ =
+            Debug.log "field" field
+
         decoder =
             Types.knownTypesToString field.typeName
                 |> String.split " "
@@ -269,13 +280,15 @@ formatDecoderField field =
 formatPipelineDecoderField : Field -> String
 formatPipelineDecoderField field =
     let
+        _ =
+            Debug.log "field" field
         decoder =
             Types.knownTypesToString field.typeName
                 |> String.split " "
                 |> List.map guessDecoder
                 |> String.join " "
     in
-        "|> required \"" ++ field.name ++ "\" (" ++ decoder ++ ")"
+        "|> Json.Decode.Pipeline.required \"" ++ field.name ++ "\" (" ++ decoder ++ ")"
 
 
 formatEncoderField : Field -> String
@@ -633,3 +646,13 @@ typeAliasFromDecoder input =
         , value =
             Json.string input
         }
+
+
+imports : String
+imports =
+    """
+import Json.Encode
+import Json.Decode exposing ((:=))
+import Json.Decode.Extra exposing ((|:))
+    """
+--import Json.Decode.Pipeline

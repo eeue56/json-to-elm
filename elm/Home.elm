@@ -71,8 +71,9 @@ viewAllAliases incoming aliases =
             List.map TypeAlias.aliasFormat aliases
 
         output =
-            [ formattedAliases
-            , List.map TypeAlias.createDecoder formattedAliases
+            [ [ TypeAlias.imports ]
+            , formattedAliases
+            , List.map TypeAlias.createPipelineDecoder formattedAliases
             , List.map TypeAlias.createEncoder formattedAliases
             ]
                 |> List.concat
@@ -95,7 +96,8 @@ viewAllDecoder incoming =
             TypeAlias.aliasFormat alias
 
         output =
-            [ formattedAlias
+            [ TypeAlias.imports
+            , formattedAlias
             , TypeAlias.createPipelineDecoder formattedAlias
             , TypeAlias.createEncoder formattedAlias
             ]
