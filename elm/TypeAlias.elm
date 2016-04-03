@@ -648,11 +648,23 @@ typeAliasFromDecoder input =
         }
 
 
-imports : String
-imports =
+originalImports : String
+originalImports =
     """
 import Json.Encode
 import Json.Decode exposing ((:=))
+-- elm-package install --yes circuithub/elm-json-extra
 import Json.Decode.Extra exposing ((|:))
     """
---import Json.Decode.Pipeline
+        |> String.trim
+
+
+pipelineImports : String
+pipelineImports =
+    """
+import Json.Encode
+import Json.Decode
+-- elm-package install -- yes noredink/elm-decode-pipeline
+import Json.Decode.Pipeline
+    """
+        |> String.trim

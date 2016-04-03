@@ -64,16 +64,30 @@ viewOutput alias =
         ]
         [ text <| TypeAlias.createDecoder alias]
 
-viewAllAliases : String -> List TypeAlias -> Html
-viewAllAliases incoming aliases =
+viewAllAliases : String -> DecoderType -> List TypeAlias -> Html
+viewAllAliases incoming decoder aliases =
     let
         formattedAliases =
             List.map TypeAlias.aliasFormat aliases
 
+        decoderCreator =
+            case decoder of
+                Pipeline ->
+                    TypeAlias.createPipelineDecoder
+                _ ->
+                    TypeAlias.createDecoder
+
+        imports =
+            case decoder of
+                Pipeline ->
+                    TypeAlias.pipelineImports
+                _ ->
+                    TypeAlias.originalImports
+
         output =
-            [ [ TypeAlias.imports ]
+            [ [ imports ]
             , formattedAliases
-            , List.map TypeAlias.createPipelineDecoder formattedAliases
+            , List.map decoderCreator formattedAliases
             , List.map TypeAlias.createEncoder formattedAliases
             ]
                 |> List.concat
@@ -96,7 +110,7 @@ viewAllDecoder incoming =
             TypeAlias.aliasFormat alias
 
         output =
-            [ TypeAlias.imports
+            [ TypeAlias.pipelineImports
             , formattedAlias
             , TypeAlias.createPipelineDecoder formattedAlias
             , TypeAlias.createEncoder formattedAlias
@@ -149,9 +163,31 @@ viewInput address alias =
     textarea
         [ on "input" targetValue (Signal.message address << UpdateInput)
         , class [ Input ]
-        , placeholder "Put a valid JSON object in here!"
+        , placeholder "Put a valid JSON object in here! Now try a type alias, an union type, or an old-style decoder!"
         ]
         [ text <| alias ]
+
+
+radio : Signal.Address Action -> DecoderType -> DecoderType -> String -> Html
+radio address selected decoder name =
+    span []
+        [ input
+            [ type' "radio"
+            , Html.Attributes.checked (selected == decoder)
+            , on "change" targetChecked (\_ -> Signal.message address (UpdateDecoder decoder))
+            ]
+            []
+        , text name
+        ]
+
+viewDecoderTypeInput : Signal.Address Action -> DecoderType -> Html
+viewDecoderTypeInput address decoder =
+    div
+        []
+        [ text "Decoder type: "
+        , radio address decoder Original "original"
+        , radio address decoder Pipeline "pipeline"
+        ]
 
 viewErrors : Signal.Address Action -> List String -> Html
 viewErrors address errors =
@@ -228,8 +264,8 @@ view address model =
         mainBody =
             case model.inputType of
                 JsonBlob ->
-                    [ viewAllAliases model.input aliases
-                    , viewStatus model.input aliases
+                    [ viewAllAliases model.input model.decoderType aliases
+                    --, viewStatus model.input aliases
                     ]
                 TypeAliasType ->
                     [ viewTypeAliasStuff model.input
@@ -244,12 +280,13 @@ view address model =
     in
         div
             [ class [ Content ] ]
-            ([ Util.stylesheetLink "/homepage.css"
+            ([ Util.stylesheetLink "./homepage.css"
             , case model.inputType of
                 JsonBlob ->
                     viewNameSelect address model.name
                 _ ->
                     span [] []
+            , viewDecoderTypeInput address model.decoderType
             , viewInput address model.input
             ]
             ++ mainBody)
@@ -257,6 +294,7 @@ view address model =
 type Action
     = UpdateInput String
     | UpdateName String
+    | UpdateDecoder DecoderType
     | Noop
 
 type InputType
@@ -265,11 +303,16 @@ type InputType
     | JsonBlob
     | DecoderString
 
+type DecoderType
+    = Original
+    | Pipeline
+
 type alias Model =
     { input : String
     , name : String
     , errors : List String
     , inputType : InputType
+    , decoderType : DecoderType
     }
 
 update : Action -> Model -> (Model, Effects.Effects Action)
@@ -295,13 +338,14 @@ update action model =
         UpdateName name ->
             ( { model | name = name }, Effects.none)
 
+        UpdateDecoder decoder ->
+            ( { model | decoderType = decoder }, Effects.none)
+
 
 model =
-    { input = """{
-  "name" :"noah",
-  "age" : [5]
-}"""
-    , name = "User"
+    { input = """"""
+    , name = "Something"
     , errors = []
     , inputType = JsonBlob
+    , decoderType = Original
     }

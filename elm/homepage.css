@@ -1,0 +1,24 @@
+body {
+    background-color: rgb(96, 181, 204);
+}
+
+.homepageContent {
+    width: 960px;
+    margin: 0 auto;
+}
+
+.homepageInput, .homepageOutput {
+    width: 40%;
+    height: 500px;
+    font-family: monospace;
+}
+
+.homepageAlias {
+    padding: 20px 0;
+}
+
+.homepageAlias > input {
+    padding: 10px;
+    margin-left: 10px;
+    width: 250px;
+}
