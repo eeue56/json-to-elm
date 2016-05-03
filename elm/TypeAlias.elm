@@ -664,7 +664,7 @@ pipelineImports =
     """
 import Json.Encode
 import Json.Decode
--- elm-package install -- yes noredink/elm-decode-pipeline
+-- elm-package install --yes NoRedInk/elm-decode-pipeline
 import Json.Decode.Pipeline
     """
         |> String.trim
