@@ -1,4 +1,4 @@
-module ColorScheme where
+module ColorScheme exposing (..)
 {-| Taken from https://github.com/elm-lang/elm-lang.org/blob/master/src/shared/ColorScheme.elm -}
 
 import Css exposing (rgb, hex)

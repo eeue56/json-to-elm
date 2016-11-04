@@ -1,4 +1,4 @@
-module Types where
+module Types exposing (..)
 
 import Json.Encode as Json
 import Json.Decode exposing ((:=))

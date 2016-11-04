@@ -1,4 +1,4 @@
-module UnionType where
+module UnionType exposing (..)
 
 import Types exposing (KnownTypes(..))
 import Dict exposing (Dict)

@@ -1,4 +1,4 @@
-module TypeAlias where
+module TypeAlias exposing (..)
 
 import String
 import Regex exposing (..)

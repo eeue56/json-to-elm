@@ -1,4 +1,4 @@
-module Home where
+module Home exposing (..)
 
 import TypeAlias exposing (TypeAlias)
 import UnionType
@@ -46,17 +46,17 @@ css =
 
 
 
-viewAlias : String -> Html
+viewAlias : String -> Html Action
 viewAlias alias =
     div [] [ text alias ]
 
-viewJson : String -> Html
+viewJson : String -> Html Action
 viewJson json =
     div
         []
         [ text <| "The entered json was: " ++ json ]
 
-viewOutput : String -> Html
+viewOutput : String -> Html Action
 viewOutput alias =
     node "pre"
         [ value <| TypeAlias.createDecoder alias
@@ -64,7 +64,7 @@ viewOutput alias =
         ]
         [ text <| TypeAlias.createDecoder alias]
 
-viewAllAliases : String -> DecoderType -> List TypeAlias -> Html
+viewAllAliases : String -> DecoderType -> List TypeAlias -> Html Action
 viewAllAliases incoming decoder aliases =
     let
         formattedAliases =
@@ -99,7 +99,7 @@ viewAllAliases incoming decoder aliases =
             ]
             []
 
-viewAllDecoder : String -> Html
+viewAllDecoder : String -> Html Action
 viewAllDecoder incoming =
     let
 
@@ -123,7 +123,7 @@ viewAllDecoder incoming =
             ]
             []
 
-viewTypeAliasStuff : String -> Html
+viewTypeAliasStuff : String -> Html Action
 viewTypeAliasStuff incoming =
     let
         output =
@@ -138,7 +138,7 @@ viewTypeAliasStuff incoming =
             ]
             []
 
-viewAllUnions : String -> Html
+viewAllUnions : String -> Html Action
 viewAllUnions union =
     let
         type' =
@@ -158,7 +158,7 @@ viewAllUnions union =
             ]
             []
 
-viewInput : Signal.Address Action -> String -> Html
+viewInput : Signal.Address Action -> String -> Html Action
 viewInput address alias =
     textarea
         [ on "input" targetValue (Signal.message address << UpdateInput)
@@ -168,7 +168,7 @@ viewInput address alias =
         [ text <| alias ]
 
 
-radio : Signal.Address Action -> DecoderType -> DecoderType -> String -> Html
+radio : Signal.Address Action -> DecoderType -> DecoderType -> String -> Html Action
 radio address selected decoder name =
     span []
         [ input
@@ -180,7 +180,7 @@ radio address selected decoder name =
         , text name
         ]
 
-viewDecoderTypeInput : Signal.Address Action -> DecoderType -> Html
+viewDecoderTypeInput : Signal.Address Action -> DecoderType -> Html Action
 viewDecoderTypeInput address decoder =
     div
         []
@@ -189,7 +189,7 @@ viewDecoderTypeInput address decoder =
         , radio address decoder Pipeline "pipeline"
         ]
 
-viewErrors : Signal.Address Action -> List String -> Html
+viewErrors : Signal.Address Action -> List String -> Html Action
 viewErrors address errors =
     ul
         []
@@ -210,7 +210,7 @@ aliasCss =
         ]
 
 
-viewStatus : String -> List TypeAlias -> Html
+viewStatus : String -> List TypeAlias -> Html Action
 viewStatus incoming aliases =
     let
         successes =
@@ -237,7 +237,7 @@ viewStatus incoming aliases =
             |> div []
 
 
-viewNameSelect : Signal.Address Action -> String -> Html
+viewNameSelect : Signal.Address Action -> String -> Html Action
 viewNameSelect address name =
     div
         [ class [ Alias ] ]
@@ -251,7 +251,7 @@ viewNameSelect address name =
         ]
 
 
-view : Signal.Address Action -> Model -> Html
+view : Signal.Address Action -> Model -> Html Action
 view address model =
     let
 
@@ -315,11 +315,11 @@ type alias Model =
     , decoderType : DecoderType
     }
 
-update : Action -> Model -> (Model, Effects.Effects Action)
+update : Action -> Model -> (Model, Cmd Action)
 update action model =
     case action of
         Noop ->
-            (model, Effects.none)
+            (model, Cmd.none)
         UpdateInput input ->
             (
                 { model
@@ -334,12 +334,12 @@ update action model =
                         else
                             JsonBlob
                 }
-                , Effects.none)
+                , Cmd.none)
         UpdateName name ->
-            ( { model | name = name }, Effects.none)
+            ( { model | name = name }, Cmd.none)
 
         UpdateDecoder decoder ->
-            ( { model | decoderType = decoder }, Effects.none)
+            ( { model | decoderType = decoder }, Cmd.none)
 
 
 model =
