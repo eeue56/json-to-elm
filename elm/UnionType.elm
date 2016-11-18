@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import String
 import List.Extra exposing (dropWhile)
 
+
 type alias UnionType =
     { name : String
     , fields : Dict String KnownTypes
@@ -39,7 +40,7 @@ createUnionType blob =
         getName blob
     , fields =
         getFields blob
-            |> List.map (\field -> (field, ResolvedType field))
+            |> List.map (\field -> ( field, ResolvedType field ))
             |> Dict.fromList
     }
 
@@ -58,9 +59,11 @@ toStringName : UnionType -> String
 toStringName union =
     "toString" ++ union.name
 
+
 fromStringName : UnionType -> String
 fromStringName union =
     "fromString" ++ union.name
+
 
 createTypeFromString : UnionType -> String
 createTypeFromString union =
@@ -87,7 +90,6 @@ createTypeFromString union =
             ]
 
 
-
 createDecoder : UnionType -> String
 createDecoder union =
     String.join ""
@@ -102,6 +104,7 @@ createDecoder union =
         , fromStringName union
         ]
 
+
 createEncoder : UnionType -> String
 createEncoder union =
     let
@@ -109,7 +112,6 @@ createEncoder union =
             Dict.keys union.fields
                 |> List.map formatConstructorDecoder
                 |> String.join "\n                "
-
     in
         String.join ""
             [ "encode"

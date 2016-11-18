@@ -1,13 +1,13 @@
 module Main exposing (..)
 
 import Home exposing (model, update, view)
-import Task
-import Json.Decode as Json
+import Html
 
-main : Program Never
+
+main : Program Never Home.Model Home.Action
 main =
-    Html.App.program
-        { init = (model, Cmd.none)
+    Html.program
+        { init = ( model, Cmd.none )
         , view = view
         , update = update
         , subscriptions = (\_ -> Sub.none)

@@ -1,17 +1,4 @@
-var make = function make(elm) {
-    elm.Native = elm.Native || {};
-    elm.Native.Types = elm.Native.Types || {};
-
-    if (elm.Native.Types.values) return elm.Native.Types.values;
-
-    var List = Elm.Native.List.make(elm);
-    var Maybe = Elm.Maybe.make(elm);
-    var Result = Elm.Result.make(elm);
-    var _U = Elm.Native.Utils.make(elm);
-    var $Json$Decode = Elm.Json.Decode.make(elm);
-    var $Json$Encode = Elm.Json.Encode.make(elm);
-    var $Json$Decode$Extra = Elm.Json.Decode.Extra.make(elm);
-
+var _eeue56$json_to_elm$Native_Types = (function(){
 
     var KNOWN_DECODERS = [
         'maybe',
@@ -71,16 +58,30 @@ var make = function make(elm) {
         }
     };
 
+    var fromArray = function fromArray(arr)
+    {
+        var out = { "ctor": "[]" };
+        for (var i = arr.length; i--; )
+        {
+            out = { "ctor": "::", _0: arr[i], _1: out};
+        }
+        return out;
+    }
+
+
     var keys = function(obj){
-        return List.fromArray(Object.keys(obj));
+        return fromArray(Object.keys(obj));
     };
 
     var get = function(name, obj){
         if (typeof obj[name] === "undefined"){
-            return Maybe.Nothing;
+            return {'ctor': 'Nothing'};
         }
 
-        return Maybe.Just(obj[name]);
+        return {
+            'ctor': "Just",
+            _0: obj[name]
+        };
     };
 
     var unsafeGet = function(name, obj){
@@ -88,6 +89,7 @@ var make = function make(elm) {
     };
 
     var unsafeEval = function(aliasName, constructorString, decoderString, encoderString, testData){
+        return { "ctor": "Err", _0: "Not currently supported" };
         try {
             console.log(constructorString);
             console.log(encoderString);
@@ -106,7 +108,7 @@ var make = function make(elm) {
         return Result.Ok(something);
     };
 
-    return elm.Native.Types.values = {
+    return {
         'makeGuessAtType' : makeGuessAtType,
         'toValue': toValue,
         'keys': keys,
@@ -114,7 +116,4 @@ var make = function make(elm) {
         'unsafeGet': F2(unsafeGet),
         'unsafeEval': F5(unsafeEval)
     };
-};
-
-Elm.Native.Types = {};
-Elm.Native.Types.make = make;
+})();

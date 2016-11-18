@@ -6,5 +6,5 @@ import Home
 
 port files : CssFileStructure
 port files =
-  toFileStructure
-    [ ( "homepage.css", compile Home.css ) ]
+    toFileStructure
+        [ ( "homepage.css", compile Home.css ) ]

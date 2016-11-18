@@ -5,6 +5,7 @@ import Regex exposing (..)
 import Types exposing (KnownTypes(..))
 import Json.Encode as Json
 
+
 knownDecoders : List String
 knownDecoders =
     [ "maybe"
@@ -24,6 +25,7 @@ type alias TypeAlias =
     , value : Json.Value
     }
 
+
 type alias Field =
     { name : String
     , typeName : KnownTypes
@@ -31,33 +33,41 @@ type alias Field =
     , value : Json.Value
     }
 
+
 capitalize : String -> String
 capitalize name =
     case String.toList name of
         [] ->
             ""
-        x::xs ->
+
+        x :: xs ->
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
+
 
 camelCase : String -> String
 camelCase name =
     case String.toList name of
         [] ->
             ""
-        x::xs ->
+
+        x :: xs ->
             (String.toLower (String.fromChar x)) ++ (String.fromList xs)
+
 
 fullyQualifiedName : Field -> String
 fullyQualifiedName field =
     field.base ++ (capitalize field.name)
+
 
 fieldFormat : Field -> String
 fieldFormat field =
     case field.typeName of
         ComplexType ->
             (camelCase field.name) ++ " : " ++ (fullyQualifiedName field)
+
         _ ->
             (camelCase field.name) ++ " : " ++ (Types.knownTypesToString field.typeName)
+
 
 aliasFormat : TypeAlias -> String
 aliasFormat alias =
@@ -74,31 +84,35 @@ aliasFormat alias =
             , "\n    }"
             ]
 
+
 generateFields : Json.Value -> String -> List Field
 generateFields stuff base =
     Types.keys stuff
-        |> List.map (\key ->
-            let
-                value =
-                    Types.unsafeGet key stuff
-                name =
-                    Types.suggestType value
+        |> List.map
+            (\key ->
+                let
+                    value =
+                        Types.unsafeGet key stuff
 
-                newBase =
-                    base ++ (capitalize key)
-                        |> capitalize
+                    name =
+                        Types.suggestType value
 
-                field =
-                    { base = String.trim base
-                    , name = String.trim key
-                    , typeName = name
-                    , value = value
-                    }
-            in
-                if name == ComplexType then
-                    generateFields value newBase ++ [ field ]
-                else
-                    [ field ]
+                    newBase =
+                        base
+                            ++ (capitalize key)
+                            |> capitalize
+
+                    field =
+                        { base = String.trim base
+                        , name = String.trim key
+                        , typeName = name
+                        , value = value
+                        }
+                in
+                    if name == ComplexType then
+                        generateFields value newBase ++ [ field ]
+                    else
+                        [ field ]
             )
         |> List.concat
 
@@ -108,10 +122,10 @@ gatherAliases items =
     items
         |> List.filter (\item -> item.typeName == ComplexType)
 
+
 resolveConflicts : List Field -> List Field
 resolveConflicts items =
     let
-
         names : List String
         names =
             List.map .name items
@@ -129,6 +143,7 @@ resolveConflicts items =
                 { field | typeName = ResolvedType <| field.name } :: fine
     in
         List.foldl update [] items
+
 
 {-|
 
@@ -152,6 +167,7 @@ createTypeAlias knownNames fields field =
         , value = field.value
         }
 
+
 createTypeAliases : Json.Value -> String -> String -> List TypeAlias
 createTypeAliases stuff aliasName base =
     let
@@ -162,7 +178,6 @@ createTypeAliases stuff aliasName base =
             , typeName = ComplexType
             , value = stuff
             }
-
 
         fields =
             generateFields stuff aliasName
@@ -179,7 +194,7 @@ createTypeAliases stuff aliasName base =
                 alias :: aliases
 
         aliases =
-           gatherAliases fields
+            gatherAliases fields
                 |> resolveConflicts
                 |> List.foldl creator []
     in
@@ -198,29 +213,36 @@ getTypeAliasName string =
             regex "type alias(.+)\\="
     in
         case find (All) pattern string of
-            [] -> Nothing
-            [x] ->
+            [] ->
+                Nothing
+
+            [ x ] ->
                 Just <| String.trim <| String.join "" <| List.map (Maybe.withDefault "") x.submatches
+
             _ ->
                 Debug.log "too much" Nothing
+
 
 getFields : String -> List String
 getFields string =
     let
         withoutNewlines =
             replace All (regex "\\n") (\_ -> "") string
+
         pattern =
             regex "\\{(.+)\\}"
     in
         case find (All) pattern withoutNewlines of
             [] ->
                 Debug.log "no matches" []
-            [x] ->
+
+            [ x ] ->
                 List.map (Maybe.withDefault "") x.submatches
                     |> List.map String.trim
                     |> String.join ""
                     |> String.split ","
                     |> List.map String.trim
+
             xs ->
                 Debug.log ("too many matches") []
 
@@ -234,18 +256,21 @@ getFieldNameAndType string =
             , typeName = Unknown
             , value = Json.string ""
             }
-        [x] ->
+
+        [ x ] ->
             { name = x
             , base = ""
             , typeName = Unknown
             , value = Json.string ""
             }
-        x::y::xs ->
+
+        x :: y :: xs ->
             { name = String.trim x
             , base = ""
             , typeName = ResolvedType y
             , value = Json.string ""
             }
+
 
 guessDecoder : String -> String
 guessDecoder typeName =
@@ -253,6 +278,7 @@ guessDecoder typeName =
         "Json.Decode." ++ (String.toLower typeName)
     else
         "decode" ++ (capitalize typeName)
+
 
 guessEncoder : String -> String
 guessEncoder typeName =
@@ -282,6 +308,7 @@ formatPipelineDecoderField field =
     let
         _ =
             Debug.log "field" field
+
         decoder =
             Types.knownTypesToString field.typeName
                 |> String.split " "
@@ -298,15 +325,17 @@ formatEncoderField field =
             Types.knownTypesToString field.typeName
                 |> String.split " "
                 |> List.map guessEncoder
-                |> List.map (\s ->
-                    if s == "Json.Encode.list" then
-                        s ++ " <| List.map "
-                    else
-                        s ++ " <| "
-                )
+                |> List.map
+                    (\s ->
+                        if s == "Json.Encode.list" then
+                            s ++ " <| List.map "
+                        else
+                            s ++ " <| "
+                    )
                 |> String.join ""
     in
-        "(\"" ++ field.name ++ "\",  " ++ encoder ++ "record." ++ field.name ++  ")"
+        "(\"" ++ field.name ++ "\",  " ++ encoder ++ "record." ++ field.name ++ ")"
+
 
 createDecoder : String -> String
 createDecoder string =
@@ -324,7 +353,6 @@ createDecoder string =
                 |> List.map getFieldNameAndType
                 |> List.map formatDecoderField
                 |> String.join "\n        "
-
     in
         String.join ""
             [ "decode"
@@ -338,6 +366,7 @@ createDecoder string =
             , "\n        "
             , fields
             ]
+
 
 createPipelineDecoder : String -> String
 createPipelineDecoder string =
@@ -355,7 +384,6 @@ createPipelineDecoder string =
                 |> List.map getFieldNameAndType
                 |> List.map formatPipelineDecoderField
                 |> String.join "\n        "
-
     in
         String.join ""
             [ "decode"
@@ -370,11 +398,13 @@ createPipelineDecoder string =
             , fields
             ]
 
+
 createEncoder : String -> String
 createEncoder string =
     let
         withoutNewlines =
             replace All (regex "\\n") (\_ -> "") string
+
         typeName =
             getTypeAliasName withoutNewlines
                 |> Maybe.withDefault ""
@@ -385,7 +415,6 @@ createEncoder string =
                 |> List.map getFieldNameAndType
                 |> List.map formatEncoderField
                 |> String.join "\n        , "
-
     in
         String.join ""
             [ "encode"
@@ -409,11 +438,13 @@ createEncoder string =
 
 -}
 
+
 runtimeObject : List Field -> String
 runtimeObject fields =
     List.map .name fields
         |> List.map (\name -> name ++ " : " ++ name)
         |> String.join ",\n"
+
 
 runtimeCreateConstructor : TypeAlias -> String
 runtimeCreateConstructor alias =
@@ -444,10 +475,13 @@ runtimeCreateConstructor alias =
             , ";"
             ]
 
+
+prefixers : List String
 prefixers =
     [ "int"
     , "float"
     ]
+
 
 runtimeGuessDecoder : Field -> String
 runtimeGuessDecoder field =
@@ -484,6 +518,7 @@ runtimeGuessEncoder field =
     let
         typeName =
             Types.knownTypesToString field.typeName
+
         lower =
             String.toLower typeName
     in
@@ -495,6 +530,7 @@ runtimeGuessEncoder field =
         else
             "decode" ++ (capitalize typeName)
 
+
 runtimeDecodeField : Field -> String
 runtimeDecodeField field =
     String.join ""
@@ -504,6 +540,7 @@ runtimeDecodeField field =
         , runtimeGuessDecoder field
         , ")"
         ]
+
 
 runtimeEncodeField : Field -> String
 runtimeEncodeField field =
@@ -516,6 +553,7 @@ runtimeEncodeField field =
         , field.name
         , ")}"
         ]
+
 
 runtimeCreateDecoder : TypeAlias -> String
 runtimeCreateDecoder alias =
@@ -539,7 +577,11 @@ runtimeCreateDecoder alias =
             , String.join ")," <| List.map runtimeDecodeField alias.fields
             , ");"
             ]
+
+
+
 --var encodeBanana = function (record) {    return $Json$Encode.object(_U.list([{ctor: "_Tuple2",_0: "name",_1: $Json$Encode.string(record.name)}]));};
+
 
 runtimeCreateEncoder : TypeAlias -> String
 runtimeCreateEncoder alias =
@@ -551,6 +593,7 @@ runtimeCreateEncoder alias =
         , "]));};"
         ]
 
+
 isUnionType : String -> Bool
 isUnionType input =
     if String.startsWith "type" input then
@@ -559,13 +602,16 @@ isUnionType input =
     else
         False
 
+
 isTypeAlias : String -> Bool
 isTypeAlias input =
     String.startsWith "type alias" input
 
+
 isJsonBlob : String -> Bool
 isJsonBlob input =
     String.startsWith "{" input && String.endsWith "}" input
+
 
 isDecoder : String -> Bool
 isDecoder input =
@@ -577,11 +623,13 @@ typeFromDecoder input =
     case String.lines (Debug.log "in" input) of
         [] ->
             Unknown
-        x::xs ->
+
+        x :: xs ->
             if String.contains "Json.Decode.Decoder" x then
                 case String.split "Json.Decode.Decoder" x of
-                    a::name::_ ->
+                    a :: name :: _ ->
                         ResolvedType (String.trim name)
+
                     _ ->
                         Unknown
             else if List.length xs == 0 then
@@ -594,12 +642,13 @@ guessTypeFromDecoder : String -> KnownTypes
 guessTypeFromDecoder decoder =
     String.words decoder
         |> List.map String.trim
-        |> List.map (\x ->
-            if String.startsWith "Json.Decode." x then
-                String.dropLeft 12 x
-                    |> capitalize
-            else
-                capitalize x
+        |> List.map
+            (\x ->
+                if String.startsWith "Json.Decode." x then
+                    String.dropLeft 12 x
+                        |> capitalize
+                else
+                    capitalize x
             )
         |> String.join " "
         |> Types.typeToKnownTypes
@@ -612,21 +661,25 @@ fieldsFromDecoder input =
         |> List.filter (String.startsWith "|:")
         |> List.map (String.dropLeft 4)
         |> List.map (String.dropRight 1)
-        |> List.filterMap (\line ->
-            case String.split ":=" line of
-                name::decoder::_ ->
-                    Just
-                        { name =
-                            String.filter ((/=) '\"') name
-                        , typeName =
-                            guessTypeFromDecoder decoder
-                        , base =
-                            ""
-                        , value =
-                            Json.string line
-                        }
-                _ -> Nothing
+        |> List.filterMap
+            (\line ->
+                case String.split ":=" line of
+                    name :: decoder :: _ ->
+                        Just
+                            { name =
+                                String.filter ((/=) '"') name
+                            , typeName =
+                                guessTypeFromDecoder decoder
+                            , base =
+                                ""
+                            , value =
+                                Json.string line
+                            }
+
+                    _ ->
+                        Nothing
             )
+
 
 typeAliasFromDecoder : String -> TypeAlias
 typeAliasFromDecoder input =
@@ -636,7 +689,6 @@ typeAliasFromDecoder input =
     in
         { name =
             Types.knownTypesToString pieces
-
         , fields =
             fieldsFromDecoder (String.trim input)
         , base =
