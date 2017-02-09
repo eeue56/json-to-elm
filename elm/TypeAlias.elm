@@ -44,6 +44,15 @@ capitalize name =
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
 
 
+cleanString : String -> String
+cleanString name =
+   let
+       parts = split All (regex "[_.\\- ]") name
+   in
+       String.join "" ((List.take 1 parts) ++
+          (List.map capitalize (List.drop 1 parts)))
+
+
 camelCase : String -> String
 camelCase name =
     case String.toList name of
@@ -51,7 +60,7 @@ camelCase name =
             ""
 
         x :: xs ->
-            (String.toLower (String.fromChar x)) ++ (String.fromList xs)
+            (String.toLower (String.fromChar x)) ++ (cleanString (String.fromList xs))
 
 
 fullyQualifiedName : Field -> String
