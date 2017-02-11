@@ -44,13 +44,19 @@ capitalize name =
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
 
 
+badCharsRegex : Regex
+badCharsRegex =
+    regex "[_.\\- ]"
+
+
 cleanString : String -> String
 cleanString name =
-   let
-       parts = split All (regex "[_.\\- ]") name
-   in
-       String.join "" ((List.take 1 parts) ++
-          (List.map capitalize (List.drop 1 parts)))
+    case split All badCharsRegex name of
+        [] ->
+            ""
+
+        x :: xs ->
+            x ++ (List.map capitalize xs |> String.join "")
 
 
 camelCase : String -> String
