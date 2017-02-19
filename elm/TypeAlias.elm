@@ -34,6 +34,16 @@ type alias Field =
     }
 
 
+{-|
+    >>> capitalize "hello"
+    "Hello"
+    >>> capitalize "Hello"
+    "Hello"
+    >>> capitalize "hello you"
+    "Hello you"
+    >>> capitalize ""
+    ""
+-}
 capitalize : String -> String
 capitalize name =
     case String.toList name of
@@ -49,6 +59,19 @@ badCharsRegex =
     regex "[_.\\- ]"
 
 
+{-|
+    >>> cleanString "hello-dog"
+    "helloDog"
+
+    >>> cleanString "hello_dog"
+    "helloDog"
+
+    >>> cleanString "hello dog"
+    "helloDog"
+
+    >>> cleanString "hello.dog"
+    "helloDog"
+-}
 cleanString : String -> String
 cleanString name =
     case split All badCharsRegex name of
@@ -59,6 +82,10 @@ cleanString name =
             x ++ (List.map capitalize xs |> String.join "")
 
 
+{-|
+    >>> camelCase "hello dog-cat"
+    "helloDogCat"
+-}
 camelCase : String -> String
 camelCase name =
     case String.toList name of
@@ -445,15 +472,6 @@ createEncoder string =
             ]
 
 
-
-{-
-   var encodeBanana = function (record) {    return $Json$Encode.object(_U.list([{ctor: "_Tuple2",_0: "name",_1: $Json$Encode.string(record.name)}]));};
-   var Banana = function (a) {    return {name: a};};
-   var decodeBanana = A2($Json$Decode$Extra._op["|:"],$Json$Decode.succeed(Banana),A2($Json$Decode._op[":="],"name",$Json$Decode.string));
-
--}
-
-
 runtimeObject : List Field -> String
 runtimeObject fields =
     List.map .name fields
@@ -609,6 +627,13 @@ runtimeCreateEncoder alias =
         ]
 
 
+{-|
+    >>> isUnionType "type alias Model = {}"
+    False
+
+    >>> isUnionType "type Animal = Dog | Cat"
+    True
+-}
 isUnionType : String -> Bool
 isUnionType input =
     if String.startsWith "type" input then
@@ -618,11 +643,24 @@ isUnionType input =
         False
 
 
+{-|
+    >>> isTypeAlias "type alias Model = {}"
+    True
+
+    >>> isTypeAlias "hello"
+    False
+-}
 isTypeAlias : String -> Bool
 isTypeAlias input =
     String.startsWith "type alias" input
 
 
+{-|
+    >>> isJsonBlob "hello"
+    False
+    >>> isJsonBlob "{ hello: dog }"
+    True
+-}
 isJsonBlob : String -> Bool
 isJsonBlob input =
     String.startsWith "{" input && String.endsWith "}" input

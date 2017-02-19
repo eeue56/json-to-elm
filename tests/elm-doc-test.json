@@ -1,0 +1,4 @@
+{
+  "root": "../elm",
+  "tests": [ "TypeAlias" ]
+}
