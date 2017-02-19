@@ -720,7 +720,7 @@ originalImports =
     """
 import Json.Encode
 import Json.Decode exposing ((:=))
--- elm-package install --yes circuithub/elm-json-extra
+-- elm-package install --yes elm-community/json-extra
 import Json.Decode.Extra exposing ((|:))
     """
         |> String.trim
