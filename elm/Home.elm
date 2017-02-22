@@ -153,8 +153,8 @@ viewAllAliases version incoming decoder aliases =
             []
 
 
-viewAllDecoder : ElmVersion -> String -> Html Action
-viewAllDecoder version incoming =
+viewAllDecoder : ElmVersion -> DecoderType -> String -> Html Action
+viewAllDecoder version decoderType incoming =
     let
         encoder =
             case version of
@@ -180,6 +180,22 @@ viewAllDecoder version incoming =
                 O18 ->
                     TypeAlias.O18.createPipelineDecoder
 
+        originalDecoder =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createDecoder
+
+                O18 ->
+                    TypeAlias.O18.createDecoder
+
+        originalImports =
+            case version of
+                O17 ->
+                    TypeAlias.O17.originalImports
+
+                O18 ->
+                    TypeAlias.O18.originalImports
+
         alias =
             TypeAlias.typeAliasFromDecoder incoming
 
@@ -187,16 +203,36 @@ viewAllDecoder version incoming =
             TypeAlias.aliasFormat alias
 
         output =
-            [ pipelineImports
-            , formattedAlias
-            , pipeLineDecoder formattedAlias
-            , encoder formattedAlias
-            ]
-                |> String.join "\n\n"
+            case decoderType of
+                Pipeline ->
+                    [ pipelineImports
+                    , formattedAlias
+                    , pipeLineDecoder formattedAlias
+                    , encoder formattedAlias
+                    ]
+                        |> String.join "\n\n"
+
+                Original ->
+                    [ originalImports
+                    , formattedAlias
+                    , originalDecoder formattedAlias
+                    , encoder formattedAlias
+                    ]
+                        |> String.join "\n\n"
+
+                English ->
+                    [ originalImports
+                    , formattedAlias
+                    , originalDecoder formattedAlias
+                    , encoder formattedAlias
+                    , TypeAlias.formatEnglishTypeAlias alias
+                    ]
+                        |> String.join "\n\n"
     in
         Html.textarea
             [ value <| output
             , class [ Output ]
+            , spellcheck False
             ]
             []
 
@@ -227,6 +263,7 @@ viewTypeAliasStuff version incoming =
         Html.textarea
             [ value <| output
             , class [ Output ]
+            , spellcheck False
             ]
             []
 
@@ -247,6 +284,7 @@ viewAllUnions union =
         Html.textarea
             [ value <| output
             , class [ Output ]
+            , spellcheck False
             ]
             []
 
@@ -256,6 +294,7 @@ viewInput alias =
     Html.textarea
         [ onInput UpdateInput
         , class [ Input ]
+        , spellcheck False
         , placeholder "Put a valid JSON object in here! Now try a type alias, an union type, or an old-style decoder!"
         ]
         [ Html.text <| alias ]
@@ -281,6 +320,7 @@ viewDecoderTypeInput decoder =
         [ Html.text "Decoder type: "
         , radio UpdateDecoder decoder Original "original"
         , radio UpdateDecoder decoder Pipeline "pipeline"
+        , radio UpdateDecoder decoder English "English"
         ]
 
 
@@ -388,7 +428,7 @@ view model =
                     ]
 
                 DecoderString ->
-                    [ viewAllDecoder model.elmVersion model.input
+                    [ viewAllDecoder model.elmVersion model.decoderType model.input
                     ]
     in
         div
@@ -426,6 +466,7 @@ type InputType
 type DecoderType
     = Original
     | Pipeline
+    | English
 
 
 type ElmVersion
@@ -450,20 +491,24 @@ update action model =
             ( model, Cmd.none )
 
         UpdateInput input ->
-            ( { model
-                | input = input
-                , inputType =
-                    if TypeAlias.isUnionType input then
-                        UnionType
-                    else if TypeAlias.isTypeAlias input then
-                        TypeAliasType
-                    else if TypeAlias.isDecoder input then
-                        DecoderString
-                    else
-                        JsonBlob
-              }
-            , Cmd.none
-            )
+            let
+                trimmed =
+                    String.trim input
+            in
+                ( { model
+                    | input = trimmed
+                    , inputType =
+                        if TypeAlias.isUnionType trimmed then
+                            UnionType
+                        else if TypeAlias.isTypeAlias trimmed then
+                            TypeAliasType
+                        else if TypeAlias.isDecoder trimmed then
+                            DecoderString
+                        else
+                            JsonBlob
+                  }
+                , Cmd.none
+                )
 
         UpdateName name ->
             ( { model | name = name }, Cmd.none )
@@ -477,13 +522,7 @@ update action model =
 
 model : Model
 model =
-    { input = """
-{
-    "hello" : "name",
-    "fish":5
-}
-
-    """
+    { input = """"""
     , name = "Something"
     , errors = []
     , inputType = JsonBlob
