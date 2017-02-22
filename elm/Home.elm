@@ -1,6 +1,8 @@
 module Home exposing (..)
 
 import TypeAlias exposing (TypeAlias)
+import TypeAlias.O17
+import TypeAlias.O18
 import UnionType
 import Types
 import String
@@ -51,7 +53,9 @@ css =
 
 
 onChange : msg -> Attribute msg
-onChange msg = Html.Events.on "change" (Json.Decode.succeed msg)
+onChange msg =
+    Html.Events.on "change" (Json.Decode.succeed msg)
+
 
 viewAlias : String -> Html Action
 viewAlias alias =
@@ -65,17 +69,26 @@ viewJson json =
         [ Html.text <| "The entered json was: " ++ json ]
 
 
-viewOutput : String -> Html Action
-viewOutput alias =
-    node "pre"
-        [ value <| TypeAlias.createDecoder alias
-        , class [ Output ]
-        ]
-        [ Html.text <| TypeAlias.createDecoder alias ]
+viewOutput : ElmVersion -> String -> Html Action
+viewOutput version alias =
+    let
+        decoderText =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createDecoder alias
+
+                O18 ->
+                    TypeAlias.O18.createDecoder alias
+    in
+        node "pre"
+            [ value decoderText
+            , class [ Output ]
+            ]
+            [ Html.text <| decoderText ]
 
 
-viewAllAliases : String -> DecoderType -> List TypeAlias -> Html Action
-viewAllAliases incoming decoder aliases =
+viewAllAliases : ElmVersion -> String -> DecoderType -> List TypeAlias -> Html Action
+viewAllAliases version incoming decoder aliases =
     let
         formattedAliases =
             List.map TypeAlias.aliasFormat aliases
@@ -83,24 +96,52 @@ viewAllAliases incoming decoder aliases =
         decoderCreator =
             case decoder of
                 Pipeline ->
-                    TypeAlias.createPipelineDecoder
+                    case version of
+                        O17 ->
+                            TypeAlias.O17.createPipelineDecoder
+
+                        O18 ->
+                            TypeAlias.O18.createPipelineDecoder
 
                 _ ->
-                    TypeAlias.createDecoder
+                    case version of
+                        O17 ->
+                            TypeAlias.O17.createDecoder
+
+                        O18 ->
+                            TypeAlias.O18.createDecoder
 
         imports =
             case decoder of
                 Pipeline ->
-                    TypeAlias.pipelineImports
+                    case version of
+                        O17 ->
+                            TypeAlias.O17.pipelineImports
+
+                        O18 ->
+                            TypeAlias.O18.pipelineImports
 
                 _ ->
-                    TypeAlias.originalImports
+                    case version of
+                        O17 ->
+                            TypeAlias.O17.originalImports
+
+                        O18 ->
+                            TypeAlias.O18.originalImports
+
+        encoder =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createEncoder
+
+                O18 ->
+                    TypeAlias.O18.createEncoder
 
         output =
             [ [ imports ]
             , formattedAliases
             , List.map decoderCreator formattedAliases
-            , List.map TypeAlias.createEncoder formattedAliases
+            , List.map encoder formattedAliases
             ]
                 |> List.concat
                 |> String.join "\n\n"
@@ -112,9 +153,33 @@ viewAllAliases incoming decoder aliases =
             []
 
 
-viewAllDecoder : String -> Html Action
-viewAllDecoder incoming =
+viewAllDecoder : ElmVersion -> String -> Html Action
+viewAllDecoder version incoming =
     let
+        encoder =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createEncoder
+
+                O18 ->
+                    TypeAlias.O18.createEncoder
+
+        pipelineImports =
+            case version of
+                O17 ->
+                    TypeAlias.O17.pipelineImports
+
+                O18 ->
+                    TypeAlias.O18.pipelineImports
+
+        pipeLineDecoder =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createPipelineDecoder
+
+                O18 ->
+                    TypeAlias.O18.createPipelineDecoder
+
         alias =
             TypeAlias.typeAliasFromDecoder incoming
 
@@ -122,10 +187,10 @@ viewAllDecoder incoming =
             TypeAlias.aliasFormat alias
 
         output =
-            [ TypeAlias.pipelineImports
+            [ pipelineImports
             , formattedAlias
-            , TypeAlias.createPipelineDecoder formattedAlias
-            , TypeAlias.createEncoder formattedAlias
+            , pipeLineDecoder formattedAlias
+            , encoder formattedAlias
             ]
                 |> String.join "\n\n"
     in
@@ -136,13 +201,27 @@ viewAllDecoder incoming =
             []
 
 
-viewTypeAliasStuff : String -> Html Action
-viewTypeAliasStuff incoming =
+viewTypeAliasStuff : ElmVersion -> String -> Html Action
+viewTypeAliasStuff version incoming =
     let
+        decoder =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createDecoder incoming
+
+                O18 ->
+                    TypeAlias.O18.createDecoder incoming
+
+        encoder =
+            case version of
+                O17 ->
+                    TypeAlias.O17.createEncoder incoming
+
+                O18 ->
+                    TypeAlias.O18.createEncoder incoming
+
         output =
-            [ TypeAlias.createDecoder incoming
-            , TypeAlias.createEncoder incoming
-            ]
+            [ decoder, encoder ]
                 |> String.join "\n\n"
     in
         Html.textarea
@@ -182,13 +261,13 @@ viewInput alias =
         [ Html.text <| alias ]
 
 
-radio : DecoderType -> DecoderType -> String -> Html Action
-radio selected decoder name =
+radio : (a -> Action) -> a -> a -> String -> Html Action
+radio onUpdate selected decoder name =
     span []
         [ input
             [ type_ "radio"
             , Html.Attributes.checked (selected == decoder)
-            , onChange (UpdateDecoder decoder)
+            , onChange (onUpdate decoder)
             ]
             []
         , Html.text name
@@ -200,8 +279,18 @@ viewDecoderTypeInput decoder =
     div
         []
         [ Html.text "Decoder type: "
-        , radio decoder Original "original"
-        , radio decoder Pipeline "pipeline"
+        , radio UpdateDecoder decoder Original "original"
+        , radio UpdateDecoder decoder Pipeline "pipeline"
+        ]
+
+
+viewElmVersionInput : ElmVersion -> Html Action
+viewElmVersionInput version =
+    div
+        []
+        [ Html.text "Decoder type: "
+        , radio ChangeElmVersion version O17 "0.17 or before"
+        , radio ChangeElmVersion version O18 "0.18 or after"
         ]
 
 
@@ -226,22 +315,27 @@ aliasCss =
         ]
 
 
-viewStatus : String -> List TypeAlias -> Html Action
-viewStatus incoming aliases =
+viewStatus : ElmVersion -> String -> List TypeAlias -> Html Action
+viewStatus version incoming aliases =
     let
         successes =
-            aliases
-                |> List.map
-                    (\alias ->
-                        ( alias
-                        , Types.unsafeEval
-                            alias.name
-                            (TypeAlias.runtimeCreateConstructor alias)
-                            (TypeAlias.runtimeCreateDecoder alias)
-                            (TypeAlias.runtimeCreateEncoder alias)
-                            alias.value
-                        )
-                    )
+            case version of
+                O17 ->
+                    aliases
+                        |> List.map
+                            (\alias ->
+                                ( alias
+                                , Types.unsafeEval
+                                    alias.name
+                                    (TypeAlias.O17.runtimeCreateConstructor alias)
+                                    (TypeAlias.O17.runtimeCreateDecoder alias)
+                                    (TypeAlias.O17.runtimeCreateEncoder alias)
+                                    alias.value
+                                )
+                            )
+
+                _ ->
+                    []
     in
         successes
             |> List.map
@@ -256,7 +350,7 @@ viewStatus incoming aliases =
 
 
 viewNameSelect : String -> Html Action
-viewNameSelect  name =
+viewNameSelect name =
     div
         [ class [ Alias ] ]
         [ label [] [ Html.text "Enter a toplevel alias name here: " ]
@@ -281,12 +375,12 @@ view model =
         mainBody =
             case model.inputType of
                 JsonBlob ->
-                    [ viewAllAliases model.input model.decoderType aliases
+                    [ viewAllAliases model.elmVersion model.input model.decoderType aliases
                       --, viewStatus model.input aliases
                     ]
 
                 TypeAliasType ->
-                    [ viewTypeAliasStuff model.input
+                    [ viewTypeAliasStuff model.elmVersion model.input
                     ]
 
                 UnionType ->
@@ -294,18 +388,19 @@ view model =
                     ]
 
                 DecoderString ->
-                    [ viewAllDecoder model.input
+                    [ viewAllDecoder model.elmVersion model.input
                     ]
     in
         div
             [ class [ Content ] ]
-            ([ Util.stylesheetLink "./homepage.css"
+            ([ Util.stylesheetLink "./elm/homepage.css"
              , case model.inputType of
                 JsonBlob ->
                     viewNameSelect model.name
 
                 _ ->
                     span [] []
+             , viewElmVersionInput model.elmVersion
              , viewDecoderTypeInput model.decoderType
              , viewInput model.input
              ]
@@ -316,6 +411,7 @@ view model =
 type Action
     = UpdateInput String
     | UpdateName String
+    | ChangeElmVersion ElmVersion
     | UpdateDecoder DecoderType
     | Noop
 
@@ -332,12 +428,18 @@ type DecoderType
     | Pipeline
 
 
+type ElmVersion
+    = O17
+    | O18
+
+
 type alias Model =
     { input : String
     , name : String
     , errors : List String
     , inputType : InputType
     , decoderType : DecoderType
+    , elmVersion : ElmVersion
     }
 
 
@@ -369,11 +471,22 @@ update action model =
         UpdateDecoder decoder ->
             ( { model | decoderType = decoder }, Cmd.none )
 
+        ChangeElmVersion version ->
+            ( { model | elmVersion = version }, Cmd.none )
+
+
 model : Model
 model =
-    { input = """"""
+    { input = """
+{
+    "hello" : "name",
+    "fish":5
+}
+
+    """
     , name = "Something"
     , errors = []
     , inputType = JsonBlob
     , decoderType = Original
+    , elmVersion = O18
     }
