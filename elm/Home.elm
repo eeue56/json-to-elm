@@ -137,11 +137,20 @@ viewAllAliases version incoming decoder aliases =
                 O18 ->
                     TypeAlias.O18.createEncoder
 
+        extra =
+            case decoder of
+                English ->
+                    List.map TypeAlias.formatEnglishTypeAlias aliases
+
+                _ ->
+                    []
+
         output =
             [ [ imports ]
             , formattedAliases
             , List.map decoderCreator formattedAliases
             , List.map encoder formattedAliases
+            , extra
             ]
                 |> List.concat
                 |> String.join "\n\n"
@@ -433,7 +442,7 @@ view model =
     in
         div
             [ class [ Content ] ]
-            ([ Util.stylesheetLink "./elm/homepage.css"
+            ([ Util.stylesheetLink "./homepage.css"
              , case model.inputType of
                 JsonBlob ->
                     viewNameSelect model.name

@@ -81,7 +81,7 @@ createDecoder string =
                 "map" ++ (toString numberOfFields)
     in
         if numberOfFields >= 7 then
-            createPipelineDecoder string
+            "import Json.Decode.Pipeline\n\n" ++ (createPipelineDecoder string)
         else
             String.join ""
                 [ "decode"
