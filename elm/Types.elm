@@ -86,6 +86,37 @@ knownTypesToString known =
             "Maybe " ++ (knownTypesToString nested)
 
 
+knownTypesToEnglish : KnownTypes -> String
+knownTypesToEnglish known =
+    case known of
+        Unknown ->
+            "I don't know what this is"
+
+        ComplexType ->
+            "something that has to be written by hand!"
+
+        ResolvedType name ->
+            "a type that you've called " ++ (String.trim name)
+
+        IntType ->
+            "an int value"
+
+        FloatType ->
+            "a float value"
+
+        StringType ->
+            "a string value"
+
+        BoolType ->
+            "a boolean value"
+
+        ListType nested ->
+            "a list of " ++ (knownTypesToString nested)
+
+        MaybeType nested ->
+            "an optional value of " ++ (knownTypesToString nested)
+
+
 suggestType : Json.Value -> KnownTypes
 suggestType value =
     Native.Types.makeGuessAtType value

@@ -266,7 +266,12 @@ viewTypeAliasStuff version incoming =
                     TypeAlias.O18.createEncoder incoming
 
         output =
-            [ decoder, encoder ]
+            [ decoder
+            , encoder
+            , TypeAlias.O17.createDecoder incoming
+                |> TypeAlias.typeAliasFromDecoder
+                |> TypeAlias.formatEnglishTypeAlias
+            ]
                 |> String.join "\n\n"
     in
         Html.textarea
@@ -442,7 +447,7 @@ view model =
     in
         div
             [ class [ Content ] ]
-            ([ Util.stylesheetLink "./homepage.css"
+            ([ Util.stylesheetLink "./elm/homepage.css"
              , case model.inputType of
                 JsonBlob ->
                     viewNameSelect model.name

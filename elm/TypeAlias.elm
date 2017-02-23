@@ -388,6 +388,13 @@ isDecoder input =
     String.startsWith "decode" input
 
 
+{-|
+    >>> typeFromDecoder "decoder : Json.Decode.Decoder Flip"
+    ResolvedType "Flip"
+
+    >>> typeFromDecoder "decoder : Json.Decode.Decoder Flip\ndecoder = .."
+    ResolvedType "Flip"
+-}
 typeFromDecoder : String -> KnownTypes
 typeFromDecoder input =
     case String.lines input of
@@ -535,7 +542,7 @@ typeAliasFromDecoder input =
 
 formatEnglishField : Field -> String
 formatEnglishField field =
-    "It must have a field called `" ++ field.name ++ "` with the type " ++ (Types.knownTypesToString field.typeName)
+    "With a field called `" ++ field.name ++ "` with that is " ++ (Types.knownTypesToEnglish field.typeName)
 
 
 formatEnglishTypeAlias : TypeAlias -> String
