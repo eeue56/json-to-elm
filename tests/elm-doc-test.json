@@ -1,4 +1,7 @@
 {
   "root": "../elm",
-  "tests": [ "TypeAlias" ]
+  "tests": [ 
+    "JsonToElm.TypeAlias",
+    "JsonToElm.Types"
+  ]
 }

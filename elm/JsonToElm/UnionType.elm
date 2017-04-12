@@ -1,9 +1,9 @@
-module UnionType exposing (..)
+module JsonToElm.UnionType exposing (..)
 
-import Types exposing (KnownTypes(..))
 import Dict exposing (Dict)
 import String
 import List.Extra exposing (dropWhile)
+import JsonToElm.Types exposing (KnownTypes(..))
 
 
 type alias UnionType =

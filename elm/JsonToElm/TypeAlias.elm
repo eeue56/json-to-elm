@@ -1,9 +1,9 @@
-module TypeAlias exposing (..)
+module JsonToElm.TypeAlias exposing (..)
 
 import String
 import Regex exposing (..)
-import Types exposing (KnownTypes(..))
 import Json.Encode as Json
+import JsonToElm.Types as Types exposing (KnownTypes(..))
 
 
 knownDecoders : List String
@@ -23,6 +23,16 @@ type alias TypeAlias =
     , base : String
     , typeName : KnownTypes
     , value : Json.Value
+    }
+
+
+defaultTypeAlias : TypeAlias
+defaultTypeAlias =
+    { name = ""
+    , fields = []
+    , base = ""
+    , typeName = ResolvedType ""
+    , value = Json.null
     }
 
 
@@ -159,6 +169,38 @@ generateFields stuff base =
         |> List.concat
 
 
+generateFieldsFromString : String -> String -> List Field
+generateFieldsFromString stuff base =
+    Types.keysFromString stuff
+        |> List.map
+            (\key ->
+                let
+                    value =
+                        Types.unsafeGetFromString key stuff
+
+                    name =
+                        Types.suggestType value
+
+                    newBase =
+                        base
+                            ++ (capitalize key)
+                            |> capitalize
+
+                    field =
+                        { base = String.trim base
+                        , name = String.trim key
+                        , typeName = name
+                        , value = value
+                        }
+                in
+                    if name == ComplexType then
+                        generateFields value newBase ++ [ field ]
+                    else
+                        [ field ]
+            )
+        |> List.concat
+
+
 gatherAliases : List Field -> List Field
 gatherAliases items =
     items
@@ -243,11 +285,61 @@ createTypeAliases stuff aliasName base =
         aliases
 
 
+createTypeAliasesFromString : String -> String -> String -> List TypeAlias
+createTypeAliasesFromString stuff aliasName base =
+    let
+        topLevel : Field
+        topLevel =
+            { name = aliasName
+            , base = ""
+            , typeName = ComplexType
+            , value = Json.string stuff
+            }
+
+        fields =
+            generateFieldsFromString stuff aliasName
+                |> (::) topLevel
+
+        creator field aliases =
+            let
+                knownNames =
+                    List.map .name aliases
+
+                alias =
+                    createTypeAlias knownNames fields field
+            in
+                alias :: aliases
+
+        aliases =
+            gatherAliases fields
+                |> resolveConflicts
+                |> List.foldl creator []
+    in
+        aliases
+
+
+{-|
+    >>> isAlreadyAName "Something" [ { defaultTypeAlias | name = "Something" } ]
+    True
+
+    >>> isAlreadyAName "Something" [ { defaultTypeAlias | name = "Blah" } ]
+    False
+-}
 isAlreadyAName : String -> List TypeAlias -> Bool
 isAlreadyAName name aliases =
     List.member name (List.map .name aliases)
 
 
+{-|
+    >>> getTypeAliasName "type alias Person = { name : String }"
+    Just "Person"
+
+    >>> getTypeAliasName "type Animal = Cat | Dog"
+    Nothing
+
+    >>> getTypeAliasName "type alias Person = \n{ name : String \n}"
+    Just "Person"
+-}
 getTypeAliasName : String -> Maybe String
 getTypeAliasName string =
     let
@@ -259,12 +351,22 @@ getTypeAliasName string =
                 Nothing
 
             [ x ] ->
-                Just <| String.trim <| String.join "" <| List.map (Maybe.withDefault "") x.submatches
+                List.map (Maybe.withDefault "") x.submatches
+                    |> String.join ""
+                    |> String.trim
+                    |> Just
 
             _ ->
                 Debug.log "too much" Nothing
 
 
+{-|
+    >>> getFields "type alias Person = { name : String, age : Int }"
+    [ "name : String", "age : Int" ]
+
+    >>> getFields "type Animal = Cat | Dog"
+    []
+-}
 getFields : String -> List String
 getFields string =
     let
@@ -276,7 +378,7 @@ getFields string =
     in
         case find (All) pattern withoutNewlines of
             [] ->
-                Debug.log "no matches" []
+                []
 
             [ x ] ->
                 List.map (Maybe.withDefault "") x.submatches
@@ -286,9 +388,14 @@ getFields string =
                     |> List.map String.trim
 
             xs ->
-                Debug.log ("too many matches") []
+                []
 
 
+{-|
+    >>> import Json.Encode
+    >>> getFieldNameAndType "name : String"
+    { name = "name", base = "", typeName = ResolvedType "String", value = Json.Encode.string "" }
+-}
 getFieldNameAndType : String -> Field
 getFieldNameAndType string =
     case String.split ":" string of
@@ -309,11 +416,18 @@ getFieldNameAndType string =
         x :: y :: xs ->
             { name = String.trim x
             , base = ""
-            , typeName = ResolvedType y
+            , typeName = ResolvedType (String.trim y)
             , value = Json.string ""
             }
 
 
+{-|
+    >>> guessDecoder "User"
+    "decodeUser"
+
+    >>> guessDecoder "Int"
+    "Json.Decode.int"
+-}
 guessDecoder : String -> String
 guessDecoder typeName =
     if List.member (String.toLower typeName) knownDecoders then
@@ -322,6 +436,13 @@ guessDecoder typeName =
         "decode" ++ (capitalize typeName)
 
 
+{-|
+    >>> guessEncoder "User"
+    "encodeUser"
+
+    >>> guessEncoder "Int"
+    "Json.Encode.int"
+-}
 guessEncoder : String -> String
 guessEncoder typeName =
     if List.member (String.toLower typeName) knownDecoders then
@@ -383,12 +504,20 @@ isJsonBlob input =
     String.startsWith "{" input && String.endsWith "}" input
 
 
+{-|
+    >>> isDecoder "decodeUser"
+    True
+
+    >>> isDecoder "flipFlop"
+    False
+-}
 isDecoder : String -> Bool
 isDecoder input =
     String.startsWith "decode" input
 
 
 {-|
+    >>> import JsonToElm.Types exposing (KnownTypes(..))
     >>> typeFromDecoder "decoder : Json.Decode.Decoder Flip"
     ResolvedType "Flip"
 
@@ -415,6 +544,13 @@ typeFromDecoder input =
                 typeFromDecoder (String.join "\n" xs)
 
 
+{-|
+    >>> guessTypeFromDecoder "Json.Decode.int"
+    IntType
+
+    >>> guessTypeFromDecoder "decodeUser"
+    ComplexType
+-}
 guessTypeFromDecoder : String -> KnownTypes
 guessTypeFromDecoder decoder =
     String.words decoder
@@ -423,6 +559,9 @@ guessTypeFromDecoder decoder =
             (\x ->
                 if String.startsWith "Json.Decode." x then
                     String.dropLeft 12 x
+                        |> capitalize
+                else if String.startsWith "decode" x then
+                    String.dropLeft 6 x
                         |> capitalize
                 else
                     capitalize x

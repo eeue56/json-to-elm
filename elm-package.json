@@ -7,7 +7,6 @@
         "elm/"
     ],
     "exposed-modules": [],
-    "native-modules": true,
     "dependencies": {
         "elm-community/list-extra": "4.0.0 <= v < 5.0.0",
         "elm-lang/core": "5.0.0 <= v < 6.0.0",

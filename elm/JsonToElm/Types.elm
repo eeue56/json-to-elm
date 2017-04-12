@@ -1,8 +1,8 @@
-module Types exposing (..)
+module JsonToElm.Types exposing (..)
 
 import Json.Encode as Json
+import Json.Decode as Decode
 import String
-import Native.Types
 
 
 type KnownTypes
@@ -17,6 +17,47 @@ type KnownTypes
     | Unknown
 
 
+{-|
+    >>> removeParens "(List String)"
+    "List String"
+-}
+removeParens : String -> String
+removeParens =
+    String.trim
+        >> String.split "("
+        >> (\xs ->
+                if List.length xs > 1 then
+                    List.drop 1 xs
+                else
+                    xs
+           )
+        >> String.join "("
+        >> String.split ")"
+        >> (\xs ->
+                if List.length xs > 1 then
+                    List.take (List.length xs - 1) xs
+                else
+                    xs
+           )
+        >> String.join ")"
+
+
+{-| Convert a type based on the name as a string into a representation of Elm
+    >>> typeToKnownTypes "Int"
+    IntType
+
+    >>> typeToKnownTypes "Flip"
+    ComplexType
+
+    >>> typeToKnownTypes ""
+    ComplexType
+
+    >>> typeToKnownTypes "List String"
+    ListType StringType
+
+    >>> typeToKnownTypes "Maybe (List String)"
+    MaybeType (ListType StringType)
+-}
 typeToKnownTypes : String -> KnownTypes
 typeToKnownTypes string =
     case string of
@@ -46,10 +87,16 @@ typeToKnownTypes string =
                 x :: xs ->
                     case x of
                         "Maybe" ->
-                            MaybeType (typeToKnownTypes <| String.join " " xs)
+                            String.join " " xs
+                                |> removeParens
+                                |> typeToKnownTypes
+                                |> MaybeType
 
                         "List" ->
-                            ListType (typeToKnownTypes <| String.join " " xs)
+                            String.join " " xs
+                                |> removeParens
+                                |> typeToKnownTypes
+                                |> ListType
 
                         _ ->
                             Unknown
@@ -123,26 +170,27 @@ suggestType value =
         |> typeToKnownTypes
 
 
-toValue : String -> Json.Value
-toValue =
-    Native.Types.toValue
-
-
 keys : Json.Value -> List String
 keys =
-    Native.Types.keys
+    Decode.decodeValue (Decode.keyValuePairs Decode.value)
+        >> Result.withDefault []
+        >> List.map Tuple.first
 
 
-get : String -> Json.Value -> Maybe Json.Value
-get =
-    Native.Types.get
+keysFromString : String -> List String
+keysFromString =
+    Decode.decodeString (Decode.keyValuePairs Decode.value)
+        >> Result.withDefault []
+        >> List.map Tuple.first
 
 
 unsafeGet : String -> Json.Value -> Json.Value
-unsafeGet =
-    Native.Types.unsafeGet
+unsafeGet key =
+    Decode.decodeValue (Decode.field key Decode.value)
+        >> Result.withDefault (Json.null)
 
 
-unsafeEval : String -> String -> String -> String -> Json.Value -> Result String Json.Value
-unsafeEval aliasName constructorString decoderString encoderString testData =
-    Native.Types.unsafeEval aliasName constructorString decoderString encoderString testData
+unsafeGetFromString : String -> String -> Json.Value
+unsafeGetFromString key =
+    Decode.decodeString (Decode.field key Decode.value)
+        >> Result.withDefault (Json.null)

@@ -1,8 +1,8 @@
-module TypeAlias.O17 exposing (..)
+module JsonToElm.TypeAlias.O17 exposing (..)
 
 import Regex exposing (regex, replace)
-import Types
-import TypeAlias exposing (TypeAlias, Field, capitalize, getFields, getTypeAliasName, getFieldNameAndType, prefixers, knownDecoders)
+import JsonToElm.Types as Types
+import JsonToElm.TypeAlias as TypeAlias exposing (TypeAlias, Field, capitalize, getFields, getTypeAliasName, getFieldNameAndType, prefixers, knownDecoders)
 
 
 formatDecoderField : Field -> String

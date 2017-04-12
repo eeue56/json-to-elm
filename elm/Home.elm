@@ -1,10 +1,10 @@
 module Home exposing (..)
 
-import TypeAlias exposing (TypeAlias)
-import TypeAlias.O17
-import TypeAlias.O18
-import UnionType
-import Types
+import JsonToElm.TypeAlias as TypeAlias exposing (TypeAlias)
+import JsonToElm.TypeAlias.O17 as TypeAliasO17
+import JsonToElm.TypeAlias.O18 as TypeAliasO18
+import JsonToElm.UnionType as UnionType
+import JsonToElm.Types as Types
 import String
 import Util
 import Html exposing (..)
@@ -16,6 +16,7 @@ import Css.Namespace exposing (namespace)
 import Html.CssHelpers
 import ColorScheme exposing (..)
 import Json.Decode
+import Json.Encode
 
 
 cssNamespace : String
@@ -75,10 +76,10 @@ viewOutput version alias =
         decoderText =
             case version of
                 O17 ->
-                    TypeAlias.O17.createDecoder alias
+                    TypeAliasO17.createDecoder alias
 
                 O18 ->
-                    TypeAlias.O18.createDecoder alias
+                    TypeAliasO18.createDecoder alias
     in
         node "pre"
             [ value decoderText
@@ -98,44 +99,44 @@ viewAllAliases version incoming decoder aliases =
                 Pipeline ->
                     case version of
                         O17 ->
-                            TypeAlias.O17.createPipelineDecoder
+                            TypeAliasO17.createPipelineDecoder
 
                         O18 ->
-                            TypeAlias.O18.createPipelineDecoder
+                            TypeAliasO18.createPipelineDecoder
 
                 _ ->
                     case version of
                         O17 ->
-                            TypeAlias.O17.createDecoder
+                            TypeAliasO17.createDecoder
 
                         O18 ->
-                            TypeAlias.O18.createDecoder
+                            TypeAliasO18.createDecoder
 
         imports =
             case decoder of
                 Pipeline ->
                     case version of
                         O17 ->
-                            TypeAlias.O17.pipelineImports
+                            TypeAliasO17.pipelineImports
 
                         O18 ->
-                            TypeAlias.O18.pipelineImports
+                            TypeAliasO18.pipelineImports
 
                 _ ->
                     case version of
                         O17 ->
-                            TypeAlias.O17.originalImports
+                            TypeAliasO17.originalImports
 
                         O18 ->
-                            TypeAlias.O18.originalImports
+                            TypeAliasO18.originalImports
 
         encoder =
             case version of
                 O17 ->
-                    TypeAlias.O17.createEncoder
+                    TypeAliasO17.createEncoder
 
                 O18 ->
-                    TypeAlias.O18.createEncoder
+                    TypeAliasO18.createEncoder
 
         extra =
             case decoder of
@@ -168,42 +169,42 @@ viewAllDecoder version decoderType incoming =
         encoder =
             case version of
                 O17 ->
-                    TypeAlias.O17.createEncoder
+                    TypeAliasO17.createEncoder
 
                 O18 ->
-                    TypeAlias.O18.createEncoder
+                    TypeAliasO18.createEncoder
 
         pipelineImports =
             case version of
                 O17 ->
-                    TypeAlias.O17.pipelineImports
+                    TypeAliasO17.pipelineImports
 
                 O18 ->
-                    TypeAlias.O18.pipelineImports
+                    TypeAliasO18.pipelineImports
 
         pipeLineDecoder =
             case version of
                 O17 ->
-                    TypeAlias.O17.createPipelineDecoder
+                    TypeAliasO17.createPipelineDecoder
 
                 O18 ->
-                    TypeAlias.O18.createPipelineDecoder
+                    TypeAliasO18.createPipelineDecoder
 
         originalDecoder =
             case version of
                 O17 ->
-                    TypeAlias.O17.createDecoder
+                    TypeAliasO17.createDecoder
 
                 O18 ->
-                    TypeAlias.O18.createDecoder
+                    TypeAliasO18.createDecoder
 
         originalImports =
             case version of
                 O17 ->
-                    TypeAlias.O17.originalImports
+                    TypeAliasO17.originalImports
 
                 O18 ->
-                    TypeAlias.O18.originalImports
+                    TypeAliasO18.originalImports
 
         alias =
             TypeAlias.typeAliasFromDecoder incoming
@@ -252,23 +253,23 @@ viewTypeAliasStuff version incoming =
         decoder =
             case version of
                 O17 ->
-                    TypeAlias.O17.createDecoder incoming
+                    TypeAliasO17.createDecoder incoming
 
                 O18 ->
-                    TypeAlias.O18.createDecoder incoming
+                    TypeAliasO18.createDecoder incoming
 
         encoder =
             case version of
                 O17 ->
-                    TypeAlias.O17.createEncoder incoming
+                    TypeAliasO17.createEncoder incoming
 
                 O18 ->
-                    TypeAlias.O18.createEncoder incoming
+                    TypeAliasO18.createEncoder incoming
 
         output =
             [ decoder
             , encoder
-            , TypeAlias.O17.createDecoder incoming
+            , TypeAliasO17.createDecoder incoming
                 |> TypeAlias.typeAliasFromDecoder
                 |> TypeAlias.formatEnglishTypeAlias
             ]
@@ -369,40 +370,6 @@ aliasCss =
         ]
 
 
-viewStatus : ElmVersion -> String -> List TypeAlias -> Html Action
-viewStatus version incoming aliases =
-    let
-        successes =
-            case version of
-                O17 ->
-                    aliases
-                        |> List.map
-                            (\alias ->
-                                ( alias
-                                , Types.unsafeEval
-                                    alias.name
-                                    (TypeAlias.O17.runtimeCreateConstructor alias)
-                                    (TypeAlias.O17.runtimeCreateDecoder alias)
-                                    (TypeAlias.O17.runtimeCreateEncoder alias)
-                                    alias.value
-                                )
-                            )
-
-                _ ->
-                    []
-    in
-        successes
-            |> List.map
-                (\( alias, evaled ) ->
-                    div
-                        []
-                        [ Html.text <| "Alias " ++ alias.name ++ " parsed:"
-                        , Html.text <| toString evaled
-                        ]
-                )
-            |> div []
-
-
 viewNameSelect : String -> Html Action
 viewNameSelect name =
     div
@@ -424,7 +391,11 @@ view model =
             if String.trim model.input == "" then
                 []
             else
-                TypeAlias.createTypeAliases (Types.toValue model.input) model.name ""
+                TypeAlias.createTypeAliasesFromString
+                    model.input
+                    model.name
+                    ""
+                    |> Debug.log "alias code:"
 
         mainBody =
             case model.inputType of
