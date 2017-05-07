@@ -2,7 +2,7 @@ module TypeAlias.O17 exposing (..)
 
 import Regex exposing (regex, replace)
 import Types
-import TypeAlias exposing (TypeAlias, Field, capitalize, getFields, getTypeAliasName, getFieldNameAndType, prefixers, knownDecoders)
+import TypeAlias exposing (TypeAlias, Field, capitalize, unCapitalize, getFields, getTypeAliasName, getFieldNameAndType, prefixers, knownDecoders)
 
 
 formatDecoderField : Field -> String
@@ -72,12 +72,11 @@ createDecoder string =
                 |> String.join "\n        "
     in
         String.join ""
-            [ "decode"
-            , typeName
+            [ unCapitalize (typeName ++ "Decoder")
             , " : Json.Decode.Decoder "
             , typeName
-            , "\ndecode"
-            , typeName
+            , "\n"
+            , unCapitalize (typeName ++ "Decoder")
             , " =\n    Json.Decode.succeed "
             , typeName
             , "\n        "
@@ -103,12 +102,11 @@ createPipelineDecoder string =
                 |> String.join "\n        "
     in
         String.join ""
-            [ "decode"
-            , typeName
+            [ unCapitalize (typeName ++ "Decoder")
             , " : Json.Decode.Decoder "
             , typeName
-            , "\ndecode"
-            , typeName
+            , "\n"
+            , unCapitalize (typeName ++ "Decoder")
             , " =\n    Json.Decode.Pipeline.decode "
             , typeName
             , "\n        "
@@ -169,7 +167,8 @@ runtimeGuessDecoder field =
                     else
                         "$Json$Decode." ++ lower
                 else
-                    "decode" ++ (capitalize typeName)
+                    unCapitalize (typeName ++ "Decoder")
+
     in
         typeNames
             |> List.map guessSingleDecoder
@@ -192,7 +191,7 @@ runtimeGuessEncoder field =
             else
                 "$Json$Encode." ++ lower
         else
-            "decode" ++ (capitalize typeName)
+            unCapitalize (typeName ++ "Decoder")
 
 
 runtimeDecodeField : Field -> String
