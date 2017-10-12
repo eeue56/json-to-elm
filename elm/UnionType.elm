@@ -118,7 +118,7 @@ createEncoder union =
             , union.name
             , " : "
             , union.name
-            , " -> Json.Value"
+            , " -> Json.Encode.Value"
             , "\nencode"
             , union.name
             , " =\n toString >> Json.Encode.string"
