@@ -107,6 +107,9 @@ fieldFormat field =
         ComplexType ->
             (camelCase field.name) ++ " : " ++ (fullyQualifiedName field)
 
+        ListType ComplexType ->
+            (camelCase field.name) ++ " : " ++ (fullyQualifiedName field)
+
         _ ->
             (camelCase field.name) ++ " : " ++ (Types.knownTypesToString field.typeName)
 
@@ -136,7 +139,7 @@ generateFields stuff base =
                     value =
                         Types.unsafeGet key stuff
 
-                    name =
+                    typeName =
                         Types.suggestType value
 
                     newBase =
@@ -147,11 +150,11 @@ generateFields stuff base =
                     field =
                         { base = String.trim base
                         , name = String.trim key
-                        , typeName = name
+                        , typeName = typeName
                         , value = value
                         }
                 in
-                    if name == ComplexType then
+                    if typeName == ComplexType || typeName == ListType ComplexType then
                         generateFields value newBase ++ [ field ]
                     else
                         [ field ]
