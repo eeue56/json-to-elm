@@ -53,6 +53,14 @@ capitalize name =
         x :: xs ->
             (String.toUpper (String.fromChar x)) ++ (String.fromList xs)
 
+unCapitalize : String -> String
+unCapitalize name =
+    case String.toList name of
+        [] ->
+            ""
+
+        x :: xs ->
+            (String.toLower (String.fromChar x)) ++ (String.fromList xs)
 
 badCharsRegex : Regex
 badCharsRegex =
