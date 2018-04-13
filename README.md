@@ -115,7 +115,7 @@ for more examples of this, see the test function
 
 ```python
 print(create_union_type_decoder('type Suit = Hearts | Diamonds | Spades | Clubs'))
-print(create_union_type_encoder('type Suit = Hearts | Diamonds | Spades | Clubs'))
+
 ```
 
 will print
